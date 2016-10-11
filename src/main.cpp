@@ -1,38 +1,32 @@
-#include <sphys/sphys.hpp>
-
-using namespace std;
-using namespace sphys;
+#include <SDL2/SDL.h>
+#include <Test1.hpp>
 
 int main(int argc, char *argv[]) {
-    Window w("Toast", );
-    SDL_Texture *bitmapTex = NULL;
-    SDL_Surface *bitmapSurface = NULL;
-    int posX = 100, posY = 100, width = 320, height = 240;
 
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Window *win = SDL_CreateWindow(
+        "test1", 
+        SDL_WINDOWPOS_CENTERED, 
+        SDL_WINDOWPOS_CENTERED, 
+        800, 600, 0
+    );
+    SDL_Renderer *rdr = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
-    bitmapSurface = SDL_LoadBMP("img/hello.bmp");
-    bitmapTex = SDL_CreateTextureFromSurface(renderer, bitmapSurface);
-    SDL_FreeSurface(bitmapSurface);
+    Test1 test1;
 
-    while (1) {
-    SDL_Event e;
-    if (SDL_PollEvent(&e)) {
-    if (e.type == SDL_QUIT) {
-    break;
-    }
-    }
+    do {
+        SDL_Event e;
+        while(SDL_PollEvent(&e))
+            test1.handleSDL2Event(&e);
+        SDL_RenderClear(rdr);
+        test1.renderToSDL2Renderer(rdr);
+        SDL_RenderPresent(rdr);
+    } while(!test1.shouldQuit());
 
-    SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, bitmapTex, NULL, NULL);
-    SDL_RenderPresent(renderer);
-    }
-
-    SDL_DestroyTexture(bitmapTex);
-    SDL_DestroyRenderer(renderer);
+    SDL_DestroyRenderer(rdr);
     SDL_DestroyWindow(win);
-
     SDL_Quit();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 

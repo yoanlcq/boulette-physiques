@@ -1,0 +1,4 @@
+#ifndef SPHYS_DISK_HPP
+#define SPHYS_DISK_HPP
+#endif//SPHYS_DISK_HPP
+

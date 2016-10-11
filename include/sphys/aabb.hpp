@@ -1,13 +1,17 @@
-#include <sphys/sphys.hpp>
+#ifndef SPHYS_AABB_HPP
+#define SPHYS_AABB_HPP
+
+#include <sphys.hpp>
 
 namespace sphys {
 
 template <typename T>
-struct aabb { 
-    vec2<T> pos, size; 
-    aabb(T x, T y, T w, T h) : pos.x(x), pos.y(y), size.x(w), size.y(h) {}
+struct aabb_2d { 
+    T x,y,w,h; 
+};
+
+typedef aabb_2d<int16_t> s16_aabb_2d;
+
 }
 
-typedef aabb<uint16_t> u16_aabb;
-
-}
+#endif//SPHYS_AABB_HPP

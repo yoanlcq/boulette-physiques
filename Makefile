@@ -15,7 +15,7 @@ rglob=$(wildcard \
 )
 
 cxx := g++
-cxxflags := -Wall -pedantic -std=c++11 -g
+cxxflags := -Wall -pedantic -std=c++11 -g -Iinclude -Iinclude/contrib
 ldlibs := -lSDL2
 cxxfiles := $(call rglob,src,*.cpp)
 ofiles := $(patsubst src/%.cpp,build/%.o,$(cxxfiles))
@@ -27,7 +27,7 @@ clean:
 re: clean all
 mrproper: re
 
-build/%.o: src/%.o
+build/%.o: src/%.cpp
 	@mkdir -p $(@D)
 	$(cxx) $(cxxflags) -c $< -o $@
 
