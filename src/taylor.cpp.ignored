@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <iomanip>
 
 uint64_t fact(uint64_t x) {
     uint64_t prod;
@@ -27,8 +28,8 @@ inline double sin_taylor(double x, size_t order) {
 int main(void) {
     double foo = 1.5;
     size_t i;
-    for(i=0 ; i<10 ; ++i)
-        std::cout << cos_taylor(foo, i) << std::endl;
-    std::cout << cos(foo) << std::endl;
+    for(i=1 ; i<=14 ; ++i)
+        std::cout << std::setw(2) << i << ": " << std::setprecision(70) << cos_taylor(foo, i) << std::endl;
+    std::cout << "    " << std::setprecision(70) << cos(foo) << std::endl;
     return EXIT_SUCCESS;
 }
