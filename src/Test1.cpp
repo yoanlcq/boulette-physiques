@@ -38,13 +38,13 @@ const uintptr_t updateFixedStepSimulationBit(0x800);
 
 Test1::Test1() : m_shouldQuit(false), tick(0), font(NULL), guiTex(NULL) {
     testQ();
-    font = TTF_OpenFont("res/basis33/basis33.ttf", 16);
-    hope(font);
+    hope(font = TTF_OpenFont("res/basis33/basis33.ttf", 16));
     aabbs.push_back(aabb_2d(vec2(50,50), vec2(10,10)));
     aabbs.push_back(aabb_2d(vec2(200,200), vec2(50,20)));
 }
 Test1::~Test1() {
     SDL_DestroyTexture(guiTex);
+    TTF_CloseFont(font);
 }
 bool Test1::shouldQuit() const { return m_shouldQuit; }
 void Test1::handleSDL2Event(const SDL_Event *e) {
@@ -58,27 +58,49 @@ void Test1::handleSDL2Event(const SDL_Event *e) {
 }
 void Test1::updateFixedStepSimulation() {
     ++tick;
-    cout << "Tick: " << tick << endl;
 }
+struct rgba32 {
+    uint32_t r:8;
+    uint32_t g:8;
+    uint32_t b:8;
+    uint32_t a:8;
+};
+
 void Test1::renderSDL2_GUI(SDL_Renderer *rdr) const {
-    SDL_Color color = {255, 255, 0};
+    SDL_Color color = {0, 128, 0, 0};
     ostringstream oss;
-    oss << "Tick: " << tick << endl;
-    SDL_Surface *s = TTF_RenderText_Solid(
+    oss << "Tick: " << tick;
+    SDL_Surface *s = TTF_RenderUTF8_Solid(
         font, oss.str().c_str(), color
     );
-    SDL_Rect rect = {10, 10, s->w, s->h};
+    hope(s);
+    rgba32 *rgba = new rgba32[s->w*s->h];
+    for(long y=0 ; y<s->h ; ++y) {
+        for(long x=0 ; x<s->w ; ++x) {
+             if(!((const uint8_t*)s->pixels)[y*s->pitch + x]) {
+                 memset(&rgba[y*s->w + x], 0, sizeof(rgba32));
+                 continue;
+             }
+            rgba[y*s->w + x].r = 255;
+            rgba[y*s->w + x].g = 200;
+            rgba[y*s->w + x].b = 10;
+            rgba[y*s->w + x].a = 255;
+        }
+    }
+    SDL_Rect rect = {0, 0, s->w, s->h};
     // XXX Use SDL_LockTexture() ???
-    SDL_UpdateTexture(guiTex, &rect, s->pixels, s->pitch);
+    SDL_UpdateTexture(guiTex, &rect, rgba, s->w*sizeof(rgba32));
     SDL_RenderCopy(rdr, guiTex, &rect, &rect);
     SDL_FreeSurface(s);
+    delete[] rgba;
 }
 void Test1::prepareRenderSDL2(SDL_Renderer *rdr) {
     wasPreparedToRender = true;
-    guiTex = SDL_CreateTexture(rdr, 
-        SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 
-        800, 600);
-    hope(guiTex);
+    hope(guiTex = SDL_CreateTexture(rdr, 
+        SDL_PIXELFORMAT_ABGR8888, 
+        SDL_TEXTUREACCESS_STREAMING, 
+        800, 600
+    ));
 }
 
 void Test1::renderSDL2(SDL_Renderer *rdr) const {
