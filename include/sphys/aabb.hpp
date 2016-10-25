@@ -22,7 +22,7 @@ struct aabb_2d {
         SDL_RenderFillRects(rdr, &rect, 1);
     }
     bool intersects(const aabb_2d &other) const {
-        vec2<T> dist = vec2<T>::abs(center - other.center);
+        vec2<T> dist = abs(center - other.center);
         vec2<T> intersect_dist = halfSize + other.halfSize;
         return dist < intersect_dist;
     }

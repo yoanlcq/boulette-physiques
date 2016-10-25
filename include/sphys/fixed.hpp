@@ -13,17 +13,20 @@ typedef uint64_t qluint;
 template <size_t d, size_t f> 
 struct q {
     qsint raw; // This member is kept public. Edit only if you know what you're doing.
-    q() : raw(0) {}
-    q(float x) : raw(x*one.raw + (x>=0.f ? 0.5f : -0.5f)) {}
-    q(double x) : raw(x*one.raw + (x>=0. ? 0.5 : -0.5)) {}
-    q(int64_t i) : raw(i<<f) {}
-    q(int i) : raw(i<<f) {}
     ~q() {}
-    static const q one;
-    static const q two;
+    q()           : raw(0) {}
+    q(float    x) : raw(x*q(1).raw + (x>=0.f ? 0.5f : -0.5f)) {}
+    q(double   x) : raw(x*q(1).raw + (x>=0.  ? 0.5  : -0.5 )) {}
+    q(int64_t  i) : raw(i<<f) {}
+    q(int32_t  i) : raw(i<<f) {}
+    q(int16_t  i) : raw(i<<f) {}
+    q(int8_t   i) : raw(i<<f) {}
+    q(uint64_t i) : raw(i<<f) {}
+    q(uint32_t i) : raw(i<<f) {}
+    q(uint16_t i) : raw(i<<f) {}
+    q(uint8_t  i) : raw(i<<f) {}
+
     static const q pi;
-    static const q two_pi;
-    static const q half_pi;
     static const q e;
     static const quint fmask;
 
@@ -73,8 +76,8 @@ struct q {
     }
 
     qlsint lraw() const {return raw;}
-    operator float() {return raw/(float)fmask;}
-    operator double() {return raw/(double)fmask;}
+    operator    float() {return raw/(float)fmask;}
+    operator   double() {return raw/(double)fmask;}
     operator  int64_t() {return raw>>f;}
     operator  int32_t() {return raw>>f;}
     operator  int16_t() {return raw>>f;}
@@ -83,10 +86,11 @@ struct q {
     operator uint32_t() {return raw>>f;}
     operator uint16_t() {return raw>>f;}
     operator uint8_t()  {return raw>>f;}
-    q& operator+=(const q& rhs);
-    q& operator-=(const q& rhs);
-    q& operator*=(const q& rhs);
-    q& operator/=(const q& rhs);
+    q  operator- () const {q r; r.raw = -raw; return r;}
+    q& operator+=(const q& rhs) {*this = (*this)+rhs; return *this;}
+    q& operator-=(const q& rhs) {*this = (*this)-rhs; return *this;}
+    q& operator*=(const q& rhs) {*this = (*this)*rhs; return *this;}
+    q& operator/=(const q& rhs) {*this = (*this)/rhs; return *this;}
     friend std::ostream& operator<<(std::ostream& lhs, const q &rhs) {return lhs << rhs.toString();}
     friend q    operator+ (const q &lhs, const q &rhs) {q r; r.raw = lhs.raw+rhs.raw; return r;}
     friend q    operator- (const q &lhs, const q &rhs) {q r; r.raw = lhs.raw-rhs.raw; return r;}
@@ -98,13 +102,11 @@ struct q {
     friend bool operator> (const q &lhs, const q &rhs) {return  operator< (rhs,lhs);}
     friend bool operator<=(const q &lhs, const q &rhs) {return !operator> (lhs,rhs);}
     friend bool operator>=(const q &lhs, const q &rhs) {return !operator< (lhs,rhs);}
+
+    friend q           abs(const q &x)                 {return x<q(0) ? -x : x;}
 };
 
-template<size_t d, size_t f> const q<d,f> q<d,f>::one(1);
-template<size_t d, size_t f> const q<d,f> q<d,f>::two(2);
 template<size_t d, size_t f> const q<d,f> q<d,f>::pi(3.14159265358979323846);
-template<size_t d, size_t f> const q<d,f> q<d,f>::two_pi(3.14159265358979323846*2.);
-template<size_t d, size_t f> const q<d,f> q<d,f>::half_pi(3.14159265358979323846/2.);
 template<size_t d, size_t f> const q<d,f> q<d,f>::e(2.71828182845904523536);
 template<size_t d, size_t f> const quint q<d,f>::fmask((1<<f)-1);
 

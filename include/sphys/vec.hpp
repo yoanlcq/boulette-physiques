@@ -16,6 +16,8 @@ struct vec2 {
     vec2& operator-=(const vec2& rhs);
     vec2& operator*=(const vec2& rhs);
     vec2& operator/=(const vec2& rhs);
+    //vec2 abs() const { return vec2(abs(x), abs(y)); }
+    friend vec2 abs(const vec2 &v) { return vec2(abs(v.x), abs(v.y)); }
     friend std::ostream& operator<<(std::ostream& lhs, const vec2 &rhs) {return lhs << "(" << rhs.x << ", " << rhs.y << ")";}
     friend vec2 operator+ (const vec2 &lhs, const vec2 &rhs) {return vec2(lhs.x+rhs.x, lhs.y+rhs.y);}
     friend vec2 operator- (const vec2 &lhs, const vec2 &rhs) {return vec2(lhs.x-rhs.x, lhs.y-rhs.y);}
@@ -24,9 +26,9 @@ struct vec2 {
     friend bool operator==(const vec2 &lhs, const vec2 &rhs) {return lhs.x==rhs.x && lhs.y==rhs.y;}
     friend bool operator!=(const vec2 &lhs, const vec2 &rhs) {return !operator==(lhs,rhs);}
     friend bool operator< (const vec2 &lhs, const vec2 &rhs) {return lhs.x<rhs.x && lhs.y<rhs.y;}
-    friend bool operator> (const vec2 &lhs, const vec2 &rhs) {return  operator< (rhs,lhs);}
-    friend bool operator<=(const vec2 &lhs, const vec2 &rhs) {return !operator> (lhs,rhs);}
-    friend bool operator>=(const vec2 &lhs, const vec2 &rhs) {return !operator< (lhs,rhs);}
+    friend bool operator> (const vec2 &lhs, const vec2 &rhs) {return lhs.x>rhs.x && lhs.y<rhs.y;}
+    friend bool operator<=(const vec2 &lhs, const vec2 &rhs) {return lhs.x<=rhs.x && lhs.y<=rhs.y;}
+    friend bool operator>=(const vec2 &lhs, const vec2 &rhs) {return lhs.x>=rhs.x && lhs.y<=rhs.y;}
 };
 
 typedef vec2<float> f32v2;

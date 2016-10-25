@@ -16,7 +16,7 @@ rglob=$(wildcard \
 
 cxx := g++
 cxxflags := -Wall -pedantic -std=c++11 -g -Iinclude -Iinclude/contrib
-ldlibs := -lSDL2
+ldlibs := -lSDL2 -lSDL2_ttf
 cxxfiles := $(call rglob,src,*.cpp)
 ofiles := $(patsubst src/%.cpp,build/%.o,$(cxxfiles))
 
