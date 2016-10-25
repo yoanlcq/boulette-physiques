@@ -34,6 +34,8 @@ struct q {
         qluint fr, ip;
         auto rawcpy = raw;
 
+        static_assert(d>1, "Needs decimal_bits > 1, Because we need more than the sign bit of signed integers.");
+        static_assert(d>0, "Needs decimal_bits > 0, otherwise we'll print garbage.");
         static_assert(d+f<=64, "Too big width.");
         if (max_dec == -1)
             max_dec = (d+f<=32 ? 2 : 10);

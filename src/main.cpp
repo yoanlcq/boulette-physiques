@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
         while(SDL_PollEvent(&e))
             test1.handleSDL2Event(&e);
         SDL_RenderClear(rdr);
-        test1.renderToSDL2Renderer(rdr);
+        test1.renderSDL2(rdr);
         SDL_RenderPresent(rdr);
     } while(!test1.shouldQuit());
 
