@@ -28,12 +28,11 @@ static void testQ() {
 #undef WRAP_TEST_REAL_NUMBER
 }
 
+namespace Test1 {
+
 Test1::Test1() {
     testQ();
-    typedef q<16,16> qtype;
-    typedef aabb_2d<qtype> qaabb_2d;
-    typedef vec2<qtype> qvec2;
-    aabbs.push_back(qaabb_2d(qvec2(50,50), qvec2(100,100)));
+    aabbs.push_back(aabb_2d(vec2(50,50), vec2(10,10)));
 }
 Test1::~Test1() {}
 bool Test1::shouldQuit() const { return m_shouldQuit; }
@@ -46,3 +45,5 @@ void Test1::renderSDL2(SDL_Renderer *rdr) const {
     SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
     aabbs[0].renderSDL2(rdr);
 }
+
+} // namespace Test1

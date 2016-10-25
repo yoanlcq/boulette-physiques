@@ -73,9 +73,16 @@ struct q {
     }
 
     qlsint lraw() const {return raw;}
-    explicit operator float() {return raw/(float)fmask;}
-    explicit operator double() {return raw/(double)fmask;}
-    explicit operator int64_t() {return raw>>f;}
+    operator float() {return raw/(float)fmask;}
+    operator double() {return raw/(double)fmask;}
+    operator  int64_t() {return raw>>f;}
+    operator  int32_t() {return raw>>f;}
+    operator  int16_t() {return raw>>f;}
+    operator  int8_t()  {return raw>>f;}
+    operator uint64_t() {return raw>>f;}
+    operator uint32_t() {return raw>>f;}
+    operator uint16_t() {return raw>>f;}
+    operator uint8_t()  {return raw>>f;}
     q& operator+=(const q& rhs);
     q& operator-=(const q& rhs);
     q& operator*=(const q& rhs);

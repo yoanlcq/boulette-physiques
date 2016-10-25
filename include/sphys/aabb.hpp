@@ -2,13 +2,17 @@
 #define SPHYS_AABB_HPP
 
 #include <sphys.hpp>
-#include <SD2/SDL.h>
+#include <SDL2/SDL.h>
 
 namespace sphys {
 
 template <typename T>
 struct aabb_2d { 
     vec2<T> center, halfSize;
+    aabb_2d() : center(0,0), halfSize(.5,.5) {}
+    aabb_2d(vec2<T> center, vec2<T>halfSize) 
+        : center(center), halfSize(halfSize) {}
+    ~aabb_2d() {}
     void renderSDL2(SDL_Renderer *rdr) const {
         SDL_Rect rect;
         rect.x = center.x - halfSize.x;
