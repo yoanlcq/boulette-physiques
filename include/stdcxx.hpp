@@ -9,5 +9,6 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <map>
 
 #endif /* STDCXX_HPP */

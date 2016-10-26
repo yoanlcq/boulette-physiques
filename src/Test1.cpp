@@ -36,7 +36,11 @@ const uintptr_t updateFixedStepSimulationBit(0x800);
 
 #define hope assert
 
-Test1::Test1() : m_shouldQuit(false), tick(0), font(NULL), guiTex(NULL) {
+Test1::Test1() : 
+    m_shouldQuit(false), tick(0), wasPreparedToRender(false), 
+    font(NULL), guiTex(NULL), mouse({}), keyboard({}), simstate({}), 
+    aabbs({})
+{
     testQ();
     hope(font = TTF_OpenFont("res/basis33/basis33.ttf", 16));
     aabbs.push_back(aabb_2d(vec2(50,50), vec2(10,10)));
@@ -49,44 +53,73 @@ Test1::~Test1() {
 bool Test1::shouldQuit() const { return m_shouldQuit; }
 void Test1::handleSDL2Event(const SDL_Event *e) {
     switch(e->type) {
-    case SDL_QUIT: m_shouldQuit = true; break;
+    case SDL_QUIT: case SDL_APP_TERMINATING: m_shouldQuit = true; break;
     case SDL_USEREVENT:
         if((uint32_t)(uintptr_t)e->user.data1 & updateFixedStepSimulationBit)
             updateFixedStepSimulation(); 
         break;
+#define HANDLE_KEY_EVT(is_down) \
+        switch(e->key.keysym.sym) { \
+        case SDLK_RIGHT: keyboard.right = is_down; break; \
+        case SDLK_UP:    keyboard.up    = is_down; break; \
+        case SDLK_LEFT:  keyboard.left  = is_down; break; \
+        case SDLK_DOWN:  keyboard.down  = is_down; break; \
+        }
+    case SDL_KEYDOWN: HANDLE_KEY_EVT(true);  break;
+    case SDL_KEYUP:   HANDLE_KEY_EVT(false); break;
+#undef HANDLE_KEY_EVT
+    case SDL_MOUSEBUTTONDOWN: mouse.down = true;  break;
+    case SDL_MOUSEBUTTONUP:   mouse.down = false; break;
+    case SDL_MOUSEWHEEL:      mouse.wheel.y += e->wheel.y; break;
     }
 }
+
 void Test1::updateFixedStepSimulation() {
     ++tick;
+    static const int speedmul = 5;
+    // TODO velocity
+    if(keyboard.right && !keyboard.left)
+        aabbs[0].center.x += speedmul;
+    if(keyboard.left && !keyboard.right)
+        aabbs[0].center.x -= speedmul;
+    if(keyboard.up && !keyboard.down)
+        aabbs[0].center.y -= speedmul;
+    if(keyboard.down && !keyboard.up)
+        aabbs[0].center.y += speedmul;
+    simstate.intersects = aabbs[0].intersects(aabbs[1]);
+    mouse.wheel.y = 0;
 }
-struct rgba32 {
-    uint32_t r:8;
-    uint32_t g:8;
-    uint32_t b:8;
-    uint32_t a:8;
-};
+
+static void rgba_px_from_bool8(
+                rgba32 *rgba, 
+                const uint8_t *pixels, 
+                size_t w, size_t h, size_t row_size, 
+                uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+{
+    for(size_t y=0 ; y<h ; ++y) {
+        for(size_t x=0 ; x<w ; ++x) {
+             if(!pixels[y*row_size + x]) {
+                 memset(&rgba[y*w + x], 0, sizeof(rgba32));
+                 continue;
+             }
+            rgba[y*w + x].r = r;
+            rgba[y*w + x].g = g;
+            rgba[y*w + x].b = b;
+            rgba[y*w + x].a = a;
+        }
+    }
+}
 
 void Test1::renderSDL2_GUI(SDL_Renderer *rdr) const {
     SDL_Color color = {0, 128, 0, 0};
     ostringstream oss;
-    oss << "Tick: " << tick;
+    oss << "Tick: " << tick << " (Red-Blue intersection: " << (simstate.intersects ? "yes" : "no") << ")";
     SDL_Surface *s = TTF_RenderUTF8_Solid(
         font, oss.str().c_str(), color
     );
     hope(s);
     rgba32 *rgba = new rgba32[s->w*s->h];
-    for(long y=0 ; y<s->h ; ++y) {
-        for(long x=0 ; x<s->w ; ++x) {
-             if(!((const uint8_t*)s->pixels)[y*s->pitch + x]) {
-                 memset(&rgba[y*s->w + x], 0, sizeof(rgba32));
-                 continue;
-             }
-            rgba[y*s->w + x].r = 255;
-            rgba[y*s->w + x].g = 200;
-            rgba[y*s->w + x].b = 10;
-            rgba[y*s->w + x].a = 255;
-        }
-    }
+    rgba_px_from_bool8(rgba, (uint8_t*)s->pixels, s->w, s->h, s->pitch, 255, 200, 10, 255);
     SDL_Rect rect = {0, 0, s->w, s->h};
     // XXX Use SDL_LockTexture() ???
     SDL_UpdateTexture(guiTex, &rect, rgba, s->w*sizeof(rgba32));
@@ -105,10 +138,11 @@ void Test1::prepareRenderSDL2(SDL_Renderer *rdr) {
 
 void Test1::renderSDL2(SDL_Renderer *rdr) const {
     assert(wasPreparedToRender);
+    assert(aabbs.size() == 2);
+    SDL_SetRenderDrawColor(rdr, 0, 0, 255, 255);
+    aabbs[1].renderSDL2(rdr);
     SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
-    for(size_t i=0 ; i<aabbs.size() ; ++i)
-        aabbs[i].renderSDL2(rdr);
-    SDL_SetRenderDrawColor(rdr, 255, 0, 255, 255);
+    aabbs[0].renderSDL2(rdr);
     renderSDL2_GUI(rdr);
 }
 

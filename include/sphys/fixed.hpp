@@ -86,7 +86,7 @@ struct q {
     operator uint32_t() {return raw>>f;}
     operator uint16_t() {return raw>>f;}
     operator uint8_t()  {return raw>>f;}
-    q  operator- () const {q r; r.raw = -raw; return r;}
+    q  operator- () const { return q(0)-*this;}
     q& operator+=(const q& rhs) {*this = (*this)+rhs; return *this;}
     q& operator-=(const q& rhs) {*this = (*this)-rhs; return *this;}
     q& operator*=(const q& rhs) {*this = (*this)*rhs; return *this;}
