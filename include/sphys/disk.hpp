@@ -37,9 +37,9 @@ struct disk_2d {
             a = dvec * other.halfSize.x / dvec.x;
         else
             a = dvec * other.halfSize.y / dvec.y;
-        std::cout << "  dvec : " << dvec << "(norm:" << norm(dvec) << ")" << std::endl;
-        std::cout << "     a : " <<    a << "(norm:" << norm(   a) << ")" << std::endl;
-        std::cout << "radius : " << radius << std::endl;
+        //std::cout << "  dvec : " << dvec << "(norm:" << norm(dvec) << ")" << std::endl;
+        //std::cout << "     a : " <<    a << "(norm:" << norm(   a) << ")" << std::endl;
+        //std::cout << "radius : " << radius << std::endl;
         return radius+norm(a) >= norm(dvec);
     }
 };

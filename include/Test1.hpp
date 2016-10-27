@@ -35,11 +35,12 @@ typedef sphys::Aabb2dColliderCpt<q>   Aabb2dColliderCpt;
 // 
 // - HandleEvents()
 // - UserPreUpdateSim()
-//   - hero.vel = ...;
+//   - hero.next_vel += ...; // shouldn't actually have to type "next_"
 // - UpdateSim()
 //   - (centers,vels) = (next_centers, next_vels)
-//   - SimCull()
+//   - SimCull() // Broad phase
 //   - (next_centers[,next_vels]) <= TestAabbsVsAabbs() <-- tick, (colliders <-- (centers,sizes[,vels]))
+//     // ^ Narrow phase
 // - UserPostUpdateSim()
 // - Render() // arrive 4x de suite environ, car plus fréquent que UpdateSim().
 //   - RenderCull()

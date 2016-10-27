@@ -228,15 +228,8 @@ struct q {
         return k*xp;
     }
     friend q  log(const q &x, const q base) {return ln(x)/ln(base);}
-    friend q sqrt(const q &x)               {
-        q r = exp(ln(x)/q(2));
-//#define Q_LOGSQRT
-#ifdef Q_LOGSQRT
-        std::cout << "sqrt(" << x << ") = " << r << std::endl;
-#endif
-        return r;
-    }
     friend q  pow(const q &x, const q &p)   {return exp(ln(x)*p);}
+    friend q sqrt(const q &x)               {return pow(x, q(0.5));}
 };
 
 template<size_t d, size_t f> const q<d,f> q<d,f>::pi(LOCAL_PI);
