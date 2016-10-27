@@ -229,7 +229,11 @@ struct q {
     }
     friend q  log(const q &x, const q base) {return ln(x)/ln(base);}
     friend q  pow(const q &x, const q &p)   {return exp(ln(x)*p);}
-    friend q sqrt(const q &x)               {return pow(x, q(0.5));}
+    friend q sqrt(const q &x)               {
+        if(x < q(0))
+            std::cerr << "Warning : Square root is not defined for " << x << std::endl;
+        return pow(x, q(0.5));
+    }
 };
 
 template<size_t d, size_t f> const q<d,f> q<d,f>::pi(LOCAL_PI);
