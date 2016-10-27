@@ -39,12 +39,13 @@ const uintptr_t updateFixedStepSimulationBit(0x800);
 Test1::Test1() : 
     m_shouldQuit(false), tick(0), wasPreparedToRender(false), 
     font(NULL), guiTex(NULL), mouse({}), keyboard({}), simstate({}), 
-    aabbs({})
+    aabbs({}), disks({})
 {
     testQ();
     hope(font = TTF_OpenFont("res/basis33/basis33.ttf", 16));
     aabbs.push_back(aabb_2d(vec2(50,50), vec2(10,10)));
     aabbs.push_back(aabb_2d(vec2(200,200), vec2(50,20)));
+    disks.push_back(disk_2d(vec2(80,80), 30));
 }
 Test1::~Test1() {
     SDL_DestroyTexture(guiTex);
@@ -79,14 +80,19 @@ void Test1::updateFixedStepSimulation() {
     static const int speedmul = 5;
     // TODO velocity
     if(keyboard.right && !keyboard.left)
-        aabbs[0].center.x += speedmul;
+        aabbs[0].center.x += speedmul,
+        disks[0].center.x += speedmul;
     if(keyboard.left && !keyboard.right)
-        aabbs[0].center.x -= speedmul;
+        aabbs[0].center.x -= speedmul,
+        disks[0].center.x -= speedmul;
     if(keyboard.up && !keyboard.down)
-        aabbs[0].center.y -= speedmul;
+        aabbs[0].center.y -= speedmul,
+        disks[0].center.y -= speedmul;
     if(keyboard.down && !keyboard.up)
-        aabbs[0].center.y += speedmul;
+        aabbs[0].center.y += speedmul,
+        disks[0].center.y += speedmul;
     simstate.intersects = aabbs[0].intersects(aabbs[1]);
+    simstate.aabb_disk_intersects = disks[0].intersects(aabbs[1]);
     mouse.wheel.y = 0;
 }
 
@@ -139,10 +145,14 @@ void Test1::prepareRenderSDL2(SDL_Renderer *rdr) {
 void Test1::renderSDL2(SDL_Renderer *rdr) const {
     assert(wasPreparedToRender);
     assert(aabbs.size() == 2);
-    SDL_SetRenderDrawColor(rdr, 0, 0, 255, 255);
+    SDL_SetRenderDrawColor(rdr, 128*simstate.intersects, 0, 255, 255);
     aabbs[1].renderSDL2(rdr);
-    SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
+    SDL_SetRenderDrawColor(rdr, 255, 0, 128*simstate.intersects, 255);
     aabbs[0].renderSDL2(rdr);
+    SDL_SetRenderDrawColor(rdr, 255, 128, 0, 255);
+    aabbs[0].renderSDL2Wireframe(rdr);
+    SDL_SetRenderDrawColor(rdr, 255, 255*simstate.aabb_disk_intersects, 0, 255);
+    disks[0].renderSDL2Wireframe(rdr);
     renderSDL2_GUI(rdr);
 }
 

@@ -12,6 +12,7 @@ extern const uintptr_t updateFixedStepSimulationBit;
 
 typedef sphys::q<16,16> q;
 typedef sphys::aabb_2d<q> aabb_2d;
+typedef sphys::disk_2d<q> disk_2d;
 typedef sphys::vec2<q> vec2;
 
 struct rgba32 {
@@ -85,6 +86,7 @@ struct Keyboard {
 
 struct SimState {
     bool intersects;
+    bool aabb_disk_intersects;
 };
 
 class Test1 {
@@ -98,6 +100,7 @@ protected:
     Keyboard keyboard;
     SimState simstate;
     std::vector<aabb_2d> aabbs;
+    std::vector<disk_2d> disks;
     void renderSDL2_GUI(SDL_Renderer *rdr) const;
 public:
     Test1();

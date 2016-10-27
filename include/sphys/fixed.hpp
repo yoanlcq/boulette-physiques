@@ -76,16 +76,16 @@ struct q {
     }
 
     qlsint lraw() const {return raw;}
-    operator    float() {return raw/(float)fmask;}
-    operator   double() {return raw/(double)fmask;}
-    operator  int64_t() {return raw>>f;}
-    operator  int32_t() {return raw>>f;}
-    operator  int16_t() {return raw>>f;}
-    operator  int8_t()  {return raw>>f;}
-    operator uint64_t() {return raw>>f;}
-    operator uint32_t() {return raw>>f;}
-    operator uint16_t() {return raw>>f;}
-    operator uint8_t()  {return raw>>f;}
+    operator    float() const {return raw/(float)fmask;}
+    operator   double() const {return raw/(double)fmask;}
+    operator  int64_t() const {return raw>>f;}
+    operator  int32_t() const {return raw>>f;}
+    operator  int16_t() const {return raw>>f;}
+    operator  int8_t()  const {return raw>>f;}
+    operator uint64_t() const {return raw>>f;}
+    operator uint32_t() const {return raw>>f;}
+    operator uint16_t() const {return raw>>f;}
+    operator uint8_t()  const {return raw>>f;}
     q  operator- () const { return q(0)-*this;}
     q& operator+=(const q& rhs) {*this = (*this)+rhs; return *this;}
     q& operator-=(const q& rhs) {*this = (*this)-rhs; return *this;}
@@ -103,7 +103,15 @@ struct q {
     friend bool operator<=(const q &lhs, const q &rhs) {return !operator> (lhs,rhs);}
     friend bool operator>=(const q &lhs, const q &rhs) {return !operator< (lhs,rhs);}
 
-    friend q           abs(const q &x)                 {return x<q(0) ? -x : x;}
+    friend q  abs(const q &x) {return x<q(0) ? -x : x;}
+    friend q sqrt(const q &x) {assert(false && "This was not implemented yet!"); return q(0);}
+    friend q  pow(const q &x) {assert(false && "This was not implemented yet!"); return q(0);}
+    friend q  sin(const q &x) {assert(false && "This was not implemented yet!"); return q(0);}
+    friend q  cos(const q &x) {assert(false && "This was not implemented yet!"); return q(0);}
+    friend q  tan(const q &x) {assert(false && "This was not implemented yet!"); return q(0);}
+    friend q  exp(const q &x) {assert(false && "This was not implemented yet!"); return q(0);}
+    friend q  ln (const q &x) {assert(false && "This was not implemented yet!"); return q(0);}
+    friend q  log(const q &x, q base) {assert(false && "This was not implemented yet!"); return q(0);}
 };
 
 template<size_t d, size_t f> const q<d,f> q<d,f>::pi(3.14159265358979323846);
