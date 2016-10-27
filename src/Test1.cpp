@@ -151,7 +151,7 @@ void Test1::renderSDL2(SDL_Renderer *rdr) const {
     aabbs[0].renderSDL2(rdr);
     SDL_SetRenderDrawColor(rdr, 255, 128, 0, 255);
     aabbs[0].renderSDL2Wireframe(rdr);
-    SDL_SetRenderDrawColor(rdr, 255, 255*simstate.aabb_disk_intersects, 0, 255);
+    SDL_SetRenderDrawColor(rdr, 255, 0, 255*simstate.aabb_disk_intersects, 255);
     disks[0].renderSDL2Wireframe(rdr);
     renderSDL2_GUI(rdr);
 }
