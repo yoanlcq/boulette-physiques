@@ -59,7 +59,7 @@ Test1::Test1() :
     aabbs({}), disks({})
 {
     testQ();
-    exit(0);
+    //exit(0);
     hope(font = TTF_OpenFont("res/basis33/basis33.ttf", 16));
     aabbs.push_back(aabb_2d(vec2(50,50), vec2(10,10)));
     aabbs.push_back(aabb_2d(vec2(200,200), vec2(50,20)));

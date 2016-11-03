@@ -27,20 +27,17 @@ struct disk_2d {
         return radius+other.radius < norm(center - other.center);
     }
     bool intersects(const aabb_2d<T> &other) const {
-        vec2<T> dvec = abs(center - other.center);
-        vec2<T> a(0,0);
-        if(!dvec.x)
-            return radius+other.halfSize.y > dvec.y;
-        if(!dvec.y)
-            return radius+other.halfSize.x > dvec.x;
-        if(dvec.x*other.halfSize.x > dvec.y*other.halfSize.y)
-            a = dvec * other.halfSize.x / dvec.x;
-        else
-            a = dvec * other.halfSize.y / dvec.y;
-        std::cout << "  dvec : " << dvec << "(norm:" << norm(dvec) << ")" << std::endl;
-        std::cout << "     a : " <<    a << "(norm:" << norm(   a) << ")" << std::endl;
-        std::cout << "radius : " << radius << std::endl;
-        return radius+norm(a) >= norm(dvec);
+        aabb_2d<T> my_aabb(center, vec2<T>(radius, radius));
+        bool aabb_intersects = other.intersects(my_aabb);
+        if(!aabb_intersects)
+            return false;
+        for(int ys=-1 ; ys<=1 ; ys+=2) for(int xs=-1 ; xs<=1 ; xs+=2)
+            if(intersects(disk_2d(vec2<T>(
+                other.center.x + T(xs)*other.halfSize.x,
+                other.center.y + T(ys)*other.halfSize.y
+                ), 0)))
+                return true;
+        return false;
     }
 };
 
