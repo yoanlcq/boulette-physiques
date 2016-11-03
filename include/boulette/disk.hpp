@@ -1,10 +1,10 @@
-#ifndef SPHYS_DISK_HPP
-#define SPHYS_DISK_HPP
+#ifndef BOULETTE_DISK_HPP
+#define BOULETTE_DISK_HPP
 
-#include <sphys.hpp>
+#include <boulette.hpp>
 #include <SDL2/SDL.h>
 
-namespace sphys {
+namespace boulette {
 
 template <typename T>
 struct disk_2d { 
@@ -46,4 +46,4 @@ struct disk_2d {
 
 }
 
-#endif//SPHYS_DISK_HPP
+#endif//BOULETTE_DISK_HPP

@@ -1,10 +1,10 @@
-#ifndef SPHYS_VEC_HPP
-#define SPHYS_VEC_HPP
+#ifndef BOULETTE_VEC_HPP
+#define BOULETTE_VEC_HPP
 
-#include <sphys.hpp>
+#include <boulette.hpp>
 #include <stdcxx.hpp>
 
-namespace sphys {
+namespace boulette {
 
 template <typename T> 
 struct vec2 { 
@@ -54,4 +54,4 @@ typedef vec2<float> f32v2;
 
 }
 
-#endif//SPHYS_VEC_HPP
+#endif//BOULETTE_VEC_HPP

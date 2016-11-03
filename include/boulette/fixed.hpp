@@ -1,9 +1,9 @@
-#ifndef SPHYS_FIXED_HPP
-#define SPHYS_FIXED_HPP
+#ifndef BOULETTE_FIXED_HPP
+#define BOULETTE_FIXED_HPP
 
 #include <stdcxx.hpp>
 
-namespace sphys {
+namespace boulette {
 
 typedef  int32_t qsint;
 typedef uint32_t quint;
@@ -109,7 +109,7 @@ struct q {
     friend bool operator>=(const q &lhs, const q &rhs) {return !operator< (lhs,rhs);}
 
     friend q  abs(const q &x) {return x<q(0) ? -x : x;}
-    friend q  sin(const q &fp) {
+    friend q  sin(q fp) {
         int sign = 1;
         q sqr, result;
         const q SK[2] = {
@@ -117,16 +117,16 @@ struct q {
             q(1.6605e-01)
         };
 
-        fp.raw %= 2*pi;
+        fp.raw %= 2*pi.raw;
         if(fp < q(0))
-            fp += 2*pi;
+            fp += q(2)*pi;
         if(fp > pi/q(2) && fp <= pi) 
             fp = pi-fp;
         else if(fp > pi && fp <= pi + pi/q(2)) {
             fp -= pi;
             sign = -1;
         } else if(fp > pi + pi/q(2)) {
-            fp = (pi.raw << 1) - fp;
+            fp = (pi.raw << 1) - fp.raw;
             sign = -1;
         }
         sqr = fp*fp;
@@ -136,12 +136,16 @@ struct q {
         result *= sqr;
         result += q(1);
         result *= fp;
-        return sign * result;
+        return q(sign) * result;
     }
     friend q  cos(const q &x) {
         return sin(pi/q(2) - x);
     }
-    friend q  tan(const q &x) {assert(false && "This was not implemented yet!"); return q(0);}
+    friend q  tan(q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
+    friend q  acos(q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
+    friend q  asin(q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
+    friend q  atan(q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
+    friend q  atan2(q y, q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
     friend q  ln (const q &x) {
         q log2, xi, ff, s, z, w, R;
         const q LN2(0.69314718055994530942);
@@ -243,7 +247,7 @@ template<size_t d, size_t f> const quint  q<d,f>::fmask((1<<f)-1);
 #undef LOCAL_E 
 #undef LOCAL_PI
 
-} // namespace sphys
+} // namespace boulette
 
 
-#endif//SPHYS_FIXED_HPP
+#endif//BOULETTE_FIXED_HPP

@@ -1,7 +1,7 @@
 #ifndef TEST1_HPP
 #define TEST1_HPP
 
-#include <sphys.hpp>
+#include <boulette.hpp>
 #include <stdcxx.hpp>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -10,10 +10,11 @@ namespace Test1 {
 
 extern const uintptr_t updateFixedStepSimulationBit;
 
-typedef sphys::q<16,16> q;
-typedef sphys::aabb_2d<q> aabb_2d;
-typedef sphys::disk_2d<q> disk_2d;
-typedef sphys::vec2<q> vec2;
+typedef boulette::q<24,8> q;
+typedef boulette::aabb_2d<q> aabb_2d;
+typedef boulette::disk_2d<q> disk_2d;
+typedef boulette::vec2<q> vec2;
+typedef boulette::vec2<int32_t> i32v2;
 
 struct rgba32 {
     uint32_t r:8;
@@ -23,12 +24,12 @@ struct rgba32 {
 };
 
 #if 0
-typedef sphys::VelocitySys<q>         VelocitySys;
-typedef sphys::VelocityCpt<q>         VelocityCpt;
-typedef sphys::Aabb2dRenderableSys<q> Aabb2dRenderableSys;
-typedef sphys::Aabb2dRenderableCpt<q> Aabb2dRenderableCpt;
-typedef sphys::Aabb2dColliderSys<q>   Aabb2dColliderSys;
-typedef sphys::Aabb2dColliderCpt<q>   Aabb2dColliderCpt;
+typedef boulette::VelocitySys<q>         VelocitySys;
+typedef boulette::VelocityCpt<q>         VelocityCpt;
+typedef boulette::Aabb2dRenderableSys<q> Aabb2dRenderableSys;
+typedef boulette::Aabb2dRenderableCpt<q> Aabb2dRenderableCpt;
+typedef boulette::Aabb2dColliderSys<q>   Aabb2dColliderSys;
+typedef boulette::Aabb2dColliderCpt<q>   Aabb2dColliderCpt;
 
 
 // C'est quoi mon problème ?
@@ -75,7 +76,7 @@ void AabbEntity::giveInput(const Keyboard &keyboard) {
 
 struct Mouse {
     bool down;
-    sphys::vec2<int32_t> wheel;
+    i32v2 wheel;
 };
 
 struct Keyboard {

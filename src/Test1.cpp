@@ -1,27 +1,44 @@
 #include <Test1.hpp>
-#include <sphys.hpp>
+#include <boulette.hpp>
 #include <stdcxx.hpp>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
 using namespace std;
-using namespace sphys;
+using namespace boulette;
 
-template<typename T> static void testRealNumbers(T a, T b) {
-    cout << "a   = " <<   a << endl;
-    cout << "b   = " <<   b << endl;
-    cout << "a+b = " << a+b << endl;
-    cout << "a-b = " << a-b << endl;
-    cout << "a*b = " << a*b << endl;
-    cout << "a/b = " << a/b << endl;
+double ln(double x) { return log(x); }
+
+template<typename T> static void testRealNumbers(T x, T y, T c) {
+    cout << "x        = " <<   x      << endl;
+    cout << "y        = " <<   y      << endl;
+    cout << "x+y      = " << x+y      << endl;
+    cout << "x-y      = " << x-y      << endl;
+    cout << "x*y      = " << x*y      << endl;
+    cout << "x/y      = " << x/y      << endl;
+    cout << "cos(x)   = " << cos(x)   << endl;
+    cout << "sin(x)   = " << sin(x)   << endl;
+    cout << "tan(x)   = " << tan(x)   << endl;
+    cout << "exp(x)   = " << exp(x)   << endl;
+    cout << "ln(x)    = " << ln(x)    << endl;
+    cout << "sqrt(x)  = " << sqrt(x)  << endl;
+    cout << "pow(x,y) = " << pow(x,y) << endl;
+    assert(c>=T(-1) && c<=T(1));
+    cout << "c          = " << c        << endl;
+    cout << "acos(c)    = " << acos(c)  << endl;
+    cout << "asin(c)    = " << asin(c)  << endl;
+    cout << "atan(x)    = " << atan(x)  << endl;
+    cout << "atan2(y,x) = " << atan2(y,x) << endl;
 }
 
 static void testQ() {
-    static const double a(1.25), b(2.25);
+    static const double a(1.25), b(2.25), clamped(0.5);
+    cout.precision(64);
 #define WRAP_TEST_REAL_NUMBER(...) \
     cout << endl << "Testing " << #__VA_ARGS__ << " :" << endl; \
-    testRealNumbers<__VA_ARGS__>(__VA_ARGS__(a),__VA_ARGS__(b))
+    testRealNumbers<__VA_ARGS__>(__VA_ARGS__(a),__VA_ARGS__(b),__VA_ARGS__(clamped))
     WRAP_TEST_REAL_NUMBER(double);
+    WRAP_TEST_REAL_NUMBER(q<16,16>);
     WRAP_TEST_REAL_NUMBER(q<32,0>);
     WRAP_TEST_REAL_NUMBER(q<28,4>);
     WRAP_TEST_REAL_NUMBER(q<26,6>);
@@ -42,6 +59,7 @@ Test1::Test1() :
     aabbs({}), disks({})
 {
     testQ();
+    exit(0);
     hope(font = TTF_OpenFont("res/basis33/basis33.ttf", 16));
     aabbs.push_back(aabb_2d(vec2(50,50), vec2(10,10)));
     aabbs.push_back(aabb_2d(vec2(200,200), vec2(50,20)));

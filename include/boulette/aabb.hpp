@@ -1,10 +1,10 @@
-#ifndef SPHYS_AABB_HPP
-#define SPHYS_AABB_HPP
+#ifndef BOULETTE_AABB_HPP
+#define BOULETTE_AABB_HPP
 
-#include <sphys.hpp>
+#include <boulette.hpp>
 #include <SDL2/SDL.h>
 
-namespace sphys {
+namespace boulette {
 
 template <typename T>
 struct aabb_2d { 
@@ -38,4 +38,4 @@ struct aabb_2d {
 
 }
 
-#endif//SPHYS_AABB_HPP
+#endif//BOULETTE_AABB_HPP
