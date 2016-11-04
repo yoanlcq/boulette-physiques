@@ -31,16 +31,28 @@ struct disk_2d {
         bool aabb_intersects = other.intersects(my_aabb);
         if(!aabb_intersects)
             return false;
-        for(int ys=-1 ; ys<=1 ; ys+=2) for(int xs=-1 ; xs<=1 ; xs+=2)
-            if(intersects(disk_2d(vec2<T>(
-                other.center.x + T(xs)other.halfSize.x,
-                other.center.y + T(ys)other.halfSize.y
-                ), 0)))
-            {
-                std::cout << "at " << xs << "," << ys << std::endl;
-                return true;
-            }
-        return false;
+        if(
+            (center.x < other.center.x-other.halfSize.x
+             && (center.y < other.center.y-other.halfSize.y 
+                 || center.y > other.center.y+other.halfSize.y
+                )
+            )
+            ||
+            (center.x > other.center.x+other.halfSize.x
+             && (center.y < other.center.y-other.halfSize.y 
+                 || center.y > other.center.y+other.halfSize.y
+                )
+            )
+        ) {
+            for(int ys=-1 ; ys<=1 ; ys+=2) for(int xs=-1 ; xs<=1 ; xs+=2)
+                if(intersects(disk_2d(vec2<T>(
+                    other.center.x + T(xs)*other.halfSize.x,
+                    other.center.y + T(ys)*other.halfSize.y
+                    ), 0)))
+                    return true;
+            return false;
+        }
+        return true;
     }
 };
 
