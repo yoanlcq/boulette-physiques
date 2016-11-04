@@ -33,8 +33,8 @@ struct disk_2d {
             return false;
         for(int ys=-1 ; ys<=1 ; ys+=2) for(int xs=-1 ; xs<=1 ; xs+=2)
             if(intersects(disk_2d(vec2<T>(
-                other.center.x + (xs>0 ? other.halfSize.x : -other.halfSize.x),
-                other.center.y + (ys>0 ? other.halfSize.y : -other.halfSize.y)
+                other.center.x + T(xs)other.halfSize.x,
+                other.center.y + T(ys)other.halfSize.y
                 ), 0)))
             {
                 std::cout << "at " << xs << "," << ys << std::endl;
