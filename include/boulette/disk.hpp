@@ -24,7 +24,7 @@ struct disk_2d {
         delete[] points;
     }
     bool intersects(const disk_2d &other) const {
-        return radius+other.radius < norm(center - other.center);
+        return radius+other.radius > norm(center - other.center);
     }
     bool intersects(const aabb_2d<T> &other) const {
         aabb_2d<T> my_aabb(center, vec2<T>(radius, radius));
@@ -33,10 +33,13 @@ struct disk_2d {
             return false;
         for(int ys=-1 ; ys<=1 ; ys+=2) for(int xs=-1 ; xs<=1 ; xs+=2)
             if(intersects(disk_2d(vec2<T>(
-                other.center.x + T(xs)*other.halfSize.x,
-                other.center.y + T(ys)*other.halfSize.y
+                other.center.x + (xs>0 ? other.halfSize.x : -other.halfSize.x),
+                other.center.y + (ys>0 ? other.halfSize.y : -other.halfSize.y)
                 ), 0)))
+            {
+                std::cout << "at " << xs << "," << ys << std::endl;
                 return true;
+            }
         return false;
     }
 };

@@ -62,8 +62,8 @@ Test1::Test1() :
     //exit(0);
     hope(font = TTF_OpenFont("res/basis33/basis33.ttf", 16));
     aabbs.push_back(aabb_2d(vec2(50,50), vec2(10,10)));
-    aabbs.push_back(aabb_2d(vec2(200,200), vec2(50,20)));
-    disks.push_back(disk_2d(vec2(80,80), 30));
+    aabbs.push_back(aabb_2d(vec2(300,300), vec2(163,100)));
+    disks.push_back(disk_2d(vec2(80,80), 20));
 }
 Test1::~Test1() {
     SDL_DestroyTexture(guiTex);
