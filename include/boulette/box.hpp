@@ -1,0 +1,3 @@
+#ifndef BOULETTE_BOX_HPP
+#define BOULETTE_BOX_HPP
+#endif//BOULETTE_BOX_HPP
