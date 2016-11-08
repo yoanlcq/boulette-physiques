@@ -22,15 +22,17 @@ struct vec2 {
     friend T norm(const vec2 &u) { 
         T sqnorm = sqrNorm(u);
         T sq = sqrt(sqnorm);
-        std::cout << "norm(): sqrt(" << sqnorm << ") = " << sq << std::endl;
+        //std::cout << "norm(): sqrt(" << sqnorm << ") = " << sq << std::endl;
         return sq; 
     }
     friend T sqrNorm(const vec2 &u) { 
+        /*
         std::cout << "sqrNorm():u.x=" << u.x << std::endl;
         std::cout << "sqrNorm():u.x*u.x=" << u.x*u.x << std::endl;
         std::cout << "sqrNorm():u.y=" << u.y << std::endl;
         std::cout << "sqrNorm():u.y*u.y=" << u.y*u.y << std::endl;
         std::cout << "sqrNorm():       =" << u.x*u.x + u.y*u.y << std::endl;
+        */
         return u.x*u.x + u.y*u.y; 
     }
     friend std::ostream& operator<<(std::ostream& lhs, const vec2 &rhs) {return lhs << "(" << rhs.x << ", " << rhs.y << ")";}

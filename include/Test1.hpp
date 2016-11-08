@@ -101,8 +101,8 @@ protected:
     Mouse mouse;
     Keyboard keyboard;
     SimState simstate;
-    std::vector<aabb_2d> aabbs;
-    std::vector<disk_2d> disks;
+    disk_2d disk;
+    vec2 vel, accel;
     void renderSDL2_GUI(SDL_Renderer *rdr) const;
 public:
     Test1();

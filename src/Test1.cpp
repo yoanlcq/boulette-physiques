@@ -56,14 +56,11 @@ const uintptr_t updateFixedStepSimulationBit(0x800);
 Test1::Test1() : 
     m_shouldQuit(false), tick(0), wasPreparedToRender(false), 
     font(NULL), guiTex(NULL), mouse({}), keyboard({}), simstate({}), 
-    aabbs({}), disks({})
+    disk(vec2(80,80),20), vel(0,0), accel(0,0)
 {
     testQ();
     //exit(0);
     hope(font = TTF_OpenFont("res/basis33/basis33.ttf", 16));
-    aabbs.push_back(aabb_2d(vec2(50,50), vec2(10,10)));
-    aabbs.push_back(aabb_2d(vec2(300,300), vec2(163,100)));
-    disks.push_back(disk_2d(vec2(80,80), 200));
 }
 Test1::~Test1() {
     SDL_DestroyTexture(guiTex);
@@ -96,21 +93,15 @@ void Test1::handleSDL2Event(const SDL_Event *e) {
 void Test1::updateFixedStepSimulation() {
     ++tick;
     static const int speedmul = 5;
-    // TODO velocity
+    accel.x = accel.y = 0;
     if(keyboard.right && !keyboard.left)
-        aabbs[0].center.x += speedmul,
-        disks[0].center.x += speedmul;
+        accel.x = speedmul;
     if(keyboard.left && !keyboard.right)
-        aabbs[0].center.x -= speedmul,
-        disks[0].center.x -= speedmul;
+        accel.x = -speedmul;
     if(keyboard.up && !keyboard.down)
-        aabbs[0].center.y -= speedmul,
-        disks[0].center.y -= speedmul;
+        accel.y = -speedmul;
     if(keyboard.down && !keyboard.up)
-        aabbs[0].center.y += speedmul,
-        disks[0].center.y += speedmul;
-    simstate.intersects = aabbs[0].intersects(aabbs[1]);
-    simstate.aabb_disk_intersects = disks[0].intersects(aabbs[1]);
+        accel.y = speedmul;
     mouse.wheel.y = 0;
 }
 
@@ -137,7 +128,10 @@ static void rgba_px_from_bool8(
 void Test1::renderSDL2_GUI(SDL_Renderer *rdr) const {
     SDL_Color color = {0, 128, 0, 0};
     ostringstream oss;
-    oss << "Tick: " << tick << " (Red-Blue intersection: " << (simstate.intersects ? "yes" : "no") << ")";
+    oss << "Tick: " << tick << " | "
+        << "Pos: " << disk.center << " | "
+        << "Vel: " << vel << " | "
+        << "Accel: " << accel;
     SDL_Surface *s = TTF_RenderUTF8_Solid(
         font, oss.str().c_str(), color
     );
@@ -162,15 +156,9 @@ void Test1::prepareRenderSDL2(SDL_Renderer *rdr) {
 
 void Test1::renderSDL2(SDL_Renderer *rdr) const {
     assert(wasPreparedToRender);
-    assert(aabbs.size() == 2);
-    SDL_SetRenderDrawColor(rdr, 128*simstate.intersects, 0, 255, 255);
-    aabbs[1].renderSDL2(rdr);
-    SDL_SetRenderDrawColor(rdr, 255, 0, 128*simstate.intersects, 255);
-    aabbs[0].renderSDL2(rdr);
-    SDL_SetRenderDrawColor(rdr, 255, 128, 0, 255);
-    aabbs[0].renderSDL2Wireframe(rdr);
-    SDL_SetRenderDrawColor(rdr, 255, 0, 255*simstate.aabb_disk_intersects, 255);
-    disks[0].renderSDL2Wireframe(rdr);
+    SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
+    //renderworld.disk.pos = lerp(oldpos, newpos, (td-tf1)/float(tf2-tf1));
+    disk.renderSDL2Wireframe(rdr);
     renderSDL2_GUI(rdr);
 }
 
