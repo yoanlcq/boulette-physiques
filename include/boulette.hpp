@@ -8,5 +8,6 @@
 #include <boulette/disk.hpp>
 #include <boulette/box.hpp>
 #include <boulette/tri.hpp>
+#include <boulette/verlet.hpp>
 
 #endif//BOULETTE_HPP
