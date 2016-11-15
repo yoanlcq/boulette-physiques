@@ -151,9 +151,17 @@ void Physics::ProcessCollision() {
 
 	float Lambda = 1.0f/( T*T + ( 1 - T )*( 1 - T ) );
 
+
+    float friction_cst = 0.005f;
+    Vec2 EdgeVector = Vec2(E2->Position - E1->Position);
+    EdgeVector.Normalize();
+
 	E1->Position -= CollisionVector*( 1 - T )*0.5f*Lambda;
 	E2->Position -= CollisionVector*      T  *0.5f*Lambda;
 	CollisionInfo.V->Position += CollisionVector*0.5f;
+    CollisionInfo.V->Position += (CollisionInfo.V->OldPosition - CollisionInfo.V->Position)*friction_cst;
+    // More Friction -> Vertices closer to the OldPosition.
+    // CollisionInfo.V->Position = CollisionInfo.V->OldPosition;
 }
 
 float Physics::IntervalDistance( float MinA, float MaxA, float MinB, float MaxB ) {
