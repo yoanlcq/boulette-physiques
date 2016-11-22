@@ -2,16 +2,95 @@
 #define BOULETTE_VERLET_HPP
 
 #include <boulette.hpp>
+#include <x86intrin.h>
 
 namespace boulette {
 
+#define THIS_AINT_GONNA_BE_DEFINED
 #ifdef THIS_AINT_GONNA_BE_DEFINED
 // T is the space type, RT is expected to be a real-number type.
 template <typename T, typename RT>
 struct VerletPhysicsSystem {
-    vec2<T> gravity;
-    RT timestep;
-    void update() {}
+    vec2<T>  screen_size; // Keep vertices inside for debugging
+    vec2<T>  gravity;  // Rather see it as a force that affects all bodies
+    RT       timestep; // The simulation's speed - 1 is the norm.
+    size_t   vcount;   // Total number of vertices.
+    vec2<T> *vaccel;   // All vertex accelerations.
+    vec2<T> *vpos;     // All vertex positions.
+    vec2<T> *vprevpos; // All vertex previous positions.
+
+    VerletPhysicsSystem(vec2<T> screen_size) 
+      : screen_size(screen_size),
+        gravity(0, .98),
+        timestep(1)
+    {
+        vcount   = 4;
+        vaccel   = (vec2<T>*)_mm_malloc(vcount*sizeof(vec2<T>), 16);
+        vpos     = (vec2<T>*)_mm_malloc(vcount*sizeof(vec2<T>), 16);
+        vprevpos = (vec2<T>*)_mm_malloc(vcount*sizeof(vec2<T>), 16);
+
+        memset(vaccel, 0, vcount*sizeof(*vaccel));
+
+        vpos[0] = vec2<T>(50, 50);
+        vpos[1] = vec2<T>(90, 50);
+        vpos[2] = vec2<T>(90, 90);
+        vpos[3] = vec2<T>(50, 90);
+
+        static_assert(sizeof *vpos == sizeof *vprevpos, "");
+        memcpy(vprevpos, vpos, vcount*sizeof *vpos);
+    }
+    ~VerletPhysicsSystem() {
+        _mm_free(vaccel);
+        _mm_free(vpos);
+        _mm_free(vprevpos);
+    }
+
+    void integrateNewPositions() {
+        const RT sq_timestep = timestep*timestep;
+        for(size_t i=0 ; i<vcount ; ++i) {
+            vaccel[i] = gravity; // Apply all forces
+            // Then integrate.
+            vec2<T> tmp = vpos[i];
+            vpos[i] += vpos[i] - vprevpos[i] + vaccel[i]*sq_timestep;
+            vprevpos[i] = tmp;
+        }
+    }
+#define min(a,b) (a<b ? a : b)
+#define max(a,b) (a>b ? a : b)
+#define clamp(x,l,h) (min(h,max(l,x)))
+    void keepVerticesInsideScreen() {
+        for(size_t i=0 ; i<vcount ; ++i) {
+            vpos[i].x = clamp(vpos[i].x, T(0), screen_size.x);
+            vpos[i].y = clamp(vpos[i].y, T(0), screen_size.y);
+        }
+    }
+    void edgeCorrectionStep() {}
+    void recomputeCentersOfMass() {}
+    void processBodyCollisions() {}
+    void iterateCollisions() {
+        // No specific reason for it to stay the same. Could change dynamically.
+        static const size_t iteration_count(10);
+        for(size_t i=0 ; i<iteration_count ; ++i) {
+            keepVerticesInsideScreen();
+            edgeCorrectionStep();
+            recomputeCentersOfMass();
+            processBodyCollisions();
+        }
+    }
+    void update() {
+        integrateNewPositions();
+        iterateCollisions();
+        //iterateCollisions();
+    }
+
+    void renderSDL2(SDL_Renderer *rdr) const {
+        SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
+        // Ugly way of rendering vertices.
+        for(size_t i=0 ; i<vcount ; ++i)
+            for(int y=-1 ; y<=1 ; ++y)
+                for(int x=-1 ; x<=1 ; ++x)
+                    SDL_RenderDrawPoint(rdr, int(vpos[i].x)+x, int(vpos[i].y)+y);
+    }
 };
 
 #endif
@@ -188,8 +267,6 @@ float Physics::IntervalDistance( float MinA, float MaxA, float MinB, float MaxB 
 
 void VerletPhysicsSys::update() {
 	updateForces();
-	updateVerlet();
-	iterateCollisions();
 }
 
 VerletVertex VerletPhysicsSys::findClosestVertex(vec2<T> cursor);

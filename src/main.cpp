@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <Test1.hpp>
+#include <TestVerlet.hpp>
 
 static uint32_t timer_callback(uint32_t interval, void *param) {
     SDL_Event e;
@@ -23,20 +24,21 @@ int main(int argc, char *argv[]) {
         std::cerr << "TTF_Init(): " << TTF_GetError() << std::endl;
         return EXIT_FAILURE;
     }
+    size_t win_w=600, win_h=400;
     SDL_Window *win = SDL_CreateWindow(
         "test1", 
         SDL_WINDOWPOS_CENTERED, 
         SDL_WINDOWPOS_CENTERED, 
-        800, 600, 0
+        win_w, win_h, 0
     );
     SDL_Renderer *rdr = SDL_CreateRenderer(win, -1, 
         SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
     );
 
-
-    Test1::Test1 test1;
+#define TEST TestVerlet
+    TEST::TEST test1(boulette::vec2<TEST::q>(win_w, win_h));
     uint32_t tick_delay = 50;
-    SDL_AddTimer(tick_delay, timer_callback, (void*)Test1::updateFixedStepSimulationBit);
+    SDL_AddTimer(tick_delay, timer_callback, (void*)TEST::updateFixedStepSimulationBit);
 
     test1.prepareRenderSDL2(rdr);
     do {
