@@ -46,6 +46,7 @@ struct VerletPhysicsSystem {
     }
 
     void integrateNewPositions() {
+        debug_break();
         const RT sq_timestep = timestep*timestep;
         for(size_t i=0 ; i<vcount ; ++i) {
             vaccel[i] = gravity; // Apply all forces

@@ -19,7 +19,7 @@ cxxflags := $(strip \
 	-Wall -Wreturn-type -pedantic \
 	-std=c++11 -g -Og \
 	-Iinclude -Iinclude/contrib \
-	-msse -msse2  \
+	-msse -msse2 -masm=intel \
 )
 ldlibs := -lSDL2 -lSDL2_ttf -lfreetype
 cxxfiles := $(call rglob,src,*.cpp)
