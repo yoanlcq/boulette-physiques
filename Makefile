@@ -17,7 +17,7 @@ rglob=$(wildcard \
 cxx := g++
 cxxflags := $(strip \
 	-Wall -Wreturn-type -pedantic \
-	-std=c++11 -g -Og \
+	-std=c++11 -g -O3 \
 	-Iinclude -Iinclude/contrib \
 	-msse -msse2 -masm=intel \
 )

@@ -18,6 +18,20 @@ struct VerletPhysicsSystem {
     vec2<T> *vaccel;   // All vertex accelerations.
     vec2<T> *vpos;     // All vertex positions.
     vec2<T> *vprevpos; // All vertex previous positions.
+    size_t   ecount;   // Total number of edges.
+    typedef struct {size_t v1, v2;} evert_s;
+    evert_s *evert; // For each edge, two indices to vertices.
+    T       *elength;     // For each edge, its length.
+    // Each array that contains data for the edges is split into
+    // 2 sections : edges that are occluded, and the others.
+    // Here, an edge is said to be occluded if we know that it is totally
+    // inside a body, therefore we can avoid testing it for collisions.
+    // Thus, to iterate over all lengths of edges that are occluded, one would
+    // do it like this :
+    //     for(size_t i=e_occluded_start ; i<ecount ; ++i)
+    // And over all those that aren't :
+    //     for(size_t i=0 ; i<e_occluded_start ; ++i)
+    size_t  e_occluded_start;
 
     VerletPhysicsSystem(vec2<T> screen_size) 
       : screen_size(screen_size),
@@ -25,9 +39,9 @@ struct VerletPhysicsSystem {
         timestep(1)
     {
         vcount   = 4;
-        vaccel   = (vec2<T>*)_mm_malloc(vcount*sizeof(vec2<T>), 16);
-        vpos     = (vec2<T>*)_mm_malloc(vcount*sizeof(vec2<T>), 16);
-        vprevpos = (vec2<T>*)_mm_malloc(vcount*sizeof(vec2<T>), 16);
+        vaccel   = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
+        vpos     = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
+        vprevpos = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
 
         memset(vaccel, 0, vcount*sizeof(*vaccel));
 
@@ -38,15 +52,31 @@ struct VerletPhysicsSystem {
 
         static_assert(sizeof *vpos == sizeof *vprevpos, "");
         memcpy(vprevpos, vpos, vcount*sizeof *vpos);
+
+        ecount  = 6;
+        evert   = (evert_s*) _mm_malloc(ecount*sizeof(evert_s), 16);
+        elength =       (T*) _mm_malloc(ecount*sizeof(T), 16);
+        evert[0].v1 = 0, evert[0].v2 = 1;
+        evert[1].v1 = 1, evert[1].v2 = 2;
+        evert[2].v1 = 2, evert[2].v2 = 3;
+        evert[3].v1 = 3, evert[3].v2 = 0;
+        e_occluded_start = 4;
+        evert[4].v1 = 0, evert[4].v2 = 2;
+        evert[5].v1 = 1, evert[5].v2 = 3;
+
+        for(size_t i=0 ; i<ecount ; ++i)
+            elength[i] = norm(vpos[evert[i].v2]-vpos[evert[i].v1]);
     }
+
     ~VerletPhysicsSystem() {
         _mm_free(vaccel);
         _mm_free(vpos);
         _mm_free(vprevpos);
+        _mm_free(evert);
+        _mm_free(elength);
     }
 
     void integrateNewPositions() {
-        debug_break();
         const RT sq_timestep = timestep*timestep;
         for(size_t i=0 ; i<vcount ; ++i) {
             vaccel[i] = gravity; // Apply all forces
@@ -65,9 +95,25 @@ struct VerletPhysicsSystem {
             vpos[i].y = clamp(vpos[i].y, T(0), screen_size.y);
         }
     }
-    void edgeCorrectionStep() {}
-    void recomputeCentersOfMass() {}
-    void processBodyCollisions() {}
+    void edgeCorrectionStep() {
+        //UpdateEdges();
+        for(size_t i=0 ; i<ecount ; ++i) {
+        
+        }
+    }
+    void recomputeCentersOfMass() {
+        /*
+        for(size_t i=0 ; i<vcount ; ++i) {
+            CalculateCenter();
+        }
+        */
+    }
+    void processBodyCollisions() {
+        /*
+        if(DetectCollision(B1,B2))
+            ProcessCollision();
+        */
+    }
     void iterateCollisions() {
         // No specific reason for it to stay the same. Could change dynamically.
         static const size_t iteration_count(10);
@@ -84,13 +130,28 @@ struct VerletPhysicsSystem {
         //iterateCollisions();
     }
 
-    void renderSDL2(SDL_Renderer *rdr) const {
+    void renderSDL2(SDL_Renderer *rdr, RT interp=1) const {
         SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
+        //Render each edge...
+        for(size_t i=0 ; i<ecount ; ++i) {
+            size_t v1 = evert[i].v1, v2 = evert[i].v2;
+            vec2<int> a, b;
+            a.x = RT(vprevpos[v1].x) + interp*RT(vpos[v1].x - vprevpos[v1].x);
+            a.y = RT(vprevpos[v1].y) + interp*RT(vpos[v1].y - vprevpos[v1].y);
+            b.x = RT(vprevpos[v2].x) + interp*RT(vpos[v2].x - vprevpos[v2].x);
+            b.y = RT(vprevpos[v2].y) + interp*RT(vpos[v2].y - vprevpos[v2].y);
+            SDL_RenderDrawLine(rdr, a.x, a.y, b.x, b.y);
+        }
+        SDL_SetRenderDrawColor(rdr,   0, 255, 0, 255);
         // Ugly way of rendering vertices.
         for(size_t i=0 ; i<vcount ; ++i)
             for(int y=-1 ; y<=1 ; ++y)
-                for(int x=-1 ; x<=1 ; ++x)
-                    SDL_RenderDrawPoint(rdr, int(vpos[i].x)+x, int(vpos[i].y)+y);
+                for(int x=-1 ; x<=1 ; ++x) {
+                    vec2<int> ipos;
+                    ipos.x = RT(vprevpos[i].x) + interp*RT(vpos[i].x - vprevpos[i].x);
+                    ipos.y = RT(vprevpos[i].y) + interp*RT(vpos[i].y - vprevpos[i].y);
+                    SDL_RenderDrawPoint(rdr, ipos.x+x, ipos.y+y);
+                }
     }
 };
 

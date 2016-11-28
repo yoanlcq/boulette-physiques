@@ -7,6 +7,8 @@
 using namespace std;
 using namespace boulette;
 
+extern uint32_t g_update_dt_ms;
+
 namespace TestVerlet {
 
 const uintptr_t updateFixedStepSimulationBit(0x800);
@@ -21,12 +23,16 @@ TestVerlet::~TestVerlet() {}
 
 bool TestVerlet::shouldQuit() const { return m_shouldQuit; }
 
+static uint32_t last_update_time_ms = 0;
+
 void TestVerlet::handleSDL2Event(const SDL_Event *e) {
     switch(e->type) {
     case SDL_QUIT: case SDL_APP_TERMINATING: m_shouldQuit = true; break;
     case SDL_USEREVENT:
-        if((uint32_t)(uintptr_t)e->user.data1 & updateFixedStepSimulationBit)
+        if((uint32_t)(uintptr_t)e->user.data1 & updateFixedStepSimulationBit) {
             updateFixedStepSimulation(); 
+            last_update_time_ms = SDL_GetTicks();
+        }
         break;
 #define HANDLE_KEY_EVT(is_down) \
         switch(e->key.keysym.sym) { \
@@ -53,10 +59,15 @@ void TestVerlet::prepareRenderSDL2(SDL_Renderer *rdr) {
     wasPreparedToRender = true;
 }
 
+
 void TestVerlet::renderSDL2(SDL_Renderer *rdr) const {
     assert(wasPreparedToRender);
     SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
-    verletSys.renderSDL2(rdr);
+    uint32_t time_ms = SDL_GetTicks();
+    uint32_t frame_dt = time_ms - last_update_time_ms;
+    float interp = frame_dt/float(g_update_dt_ms);
+    //cout << interp << endl;
+    verletSys.renderSDL2(rdr, interp);
 }
 
 } // namespace TestVerlet

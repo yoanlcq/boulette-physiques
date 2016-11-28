@@ -14,6 +14,8 @@ static uint32_t timer_callback(uint32_t interval, void *param) {
     return interval;
 }
 
+uint32_t g_update_dt_ms = 0;
+
 int main(int argc, char *argv[]) {
 
     if(SDL_Init(SDL_INIT_EVERYTHING) < 0) {
@@ -37,8 +39,8 @@ int main(int argc, char *argv[]) {
 
 #define TEST TestVerlet
     TEST::TEST test1(boulette::vec2<TEST::q>(win_w, win_h));
-    uint32_t tick_delay = 50;
-    SDL_AddTimer(tick_delay, timer_callback, (void*)TEST::updateFixedStepSimulationBit);
+    g_update_dt_ms = 50;
+    SDL_AddTimer(g_update_dt_ms, timer_callback, (void*)TEST::updateFixedStepSimulationBit);
 
     test1.prepareRenderSDL2(rdr);
     do {
