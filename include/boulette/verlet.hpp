@@ -11,15 +11,18 @@ namespace boulette {
 // T is the space type, RT is expected to be a real-number type.
 template <typename T, typename RT>
 struct VerletPhysicsSystem {
+
+    typedef size_t index;
+    typedef struct {index v1, v2;} evert_s;
+
     vec2<T>  screen_size; // Keep vertices inside for debugging
     vec2<T>  gravity;  // Rather see it as a force that affects all bodies
     RT       timestep; // The simulation's speed - 1 is the norm.
-    size_t   vcount;   // Total number of vertices.
+    index    vcount;   // Total number of vertices.
     vec2<T> *vaccel;   // All vertex accelerations.
     vec2<T> *vpos;     // All vertex positions.
     vec2<T> *vprevpos; // All vertex previous positions.
-    size_t   ecount;   // Total number of edges.
-    typedef struct {size_t v1, v2;} evert_s;
+    index    ecount;   // Total number of edges.
     evert_s *evert; // For each edge, two indices to vertices.
     T       *elength;     // For each edge, its length.
     // Each array that contains data for the edges is split into
@@ -28,14 +31,20 @@ struct VerletPhysicsSystem {
     // inside a body, therefore we can avoid testing it for collisions.
     // Thus, to iterate over all lengths of edges that are occluded, one would
     // do it like this :
-    //     for(size_t i=e_occluded_start ; i<ecount ; ++i)
+    //     for(index i=e_occluded_start ; i<ecount ; ++i)
     // And over all those that aren't :
-    //     for(size_t i=0 ; i<e_occluded_start ; ++i)
-    size_t  e_occluded_start;
+    //     for(index i=0 ; i<e_occluded_start ; ++i)
+    index    e_occluded_start;
+    index    bcount;     // Total number of Bodies.
+    vec2<T> *bcenter;    // For each body, its center of mass.
+    index   *bvertcount; // For each body, its vertex count.
+    index  **bvert;      // For each body, its vertex indices.
+    index   *bedgecount; // For each body, its edge count.
+    index  **bedge;      // For each body, its edge indices.
 
     VerletPhysicsSystem(vec2<T> screen_size) 
       : screen_size(screen_size),
-        gravity(0, .98),
+        gravity(0, 1), // Not .98, cuz it is rounded to zero if T is integer.
         timestep(1)
     {
         vcount   = 4;
@@ -64,8 +73,26 @@ struct VerletPhysicsSystem {
         evert[4].v1 = 0, evert[4].v2 = 2;
         evert[5].v1 = 1, evert[5].v2 = 3;
 
-        for(size_t i=0 ; i<ecount ; ++i)
+        for(index i=0 ; i<ecount ; ++i)
             elength[i] = norm(vpos[evert[i].v2]-vpos[evert[i].v1]);
+
+        bcount     = 1;
+        bcenter    = (vec2<T>*) _mm_malloc(bcount*sizeof(vec2<T>), 16);
+        bvertcount =   (index*) _mm_malloc(bcount*sizeof(index), 16);
+        bedgecount =   (index*) _mm_malloc(bcount*sizeof(index), 16);
+        bvert      =  (index**) _mm_malloc(bcount*sizeof(index*), 16);
+        bedge      =  (index**) _mm_malloc(bcount*sizeof(index*), 16);
+
+        bcenter[0]    = vec2<T>(0,0);
+        bvertcount[0] = 4;
+        bedgecount[0] = 2;
+        bvert[0]      = (index*) _mm_malloc(bvertcount[0]*sizeof(index), 16);
+        bedge[0]      = (index*) _mm_malloc(bedgecount[0]*sizeof(index), 16);
+
+        for(index i=0 ; i<bvertcount[0] ; ++i)
+            bvert[0][i] = i;
+        for(index i=0 ; i<bedgecount[0] ; ++i)
+            bedge[0][i] = i;
     }
 
     ~VerletPhysicsSystem() {
@@ -78,7 +105,7 @@ struct VerletPhysicsSystem {
 
     void integrateNewPositions() {
         const RT sq_timestep = timestep*timestep;
-        for(size_t i=0 ; i<vcount ; ++i) {
+        for(index i=0 ; i<vcount ; ++i) {
             vaccel[i] = gravity; // Apply all forces
             // Then integrate.
             vec2<T> tmp = vpos[i];
@@ -86,33 +113,49 @@ struct VerletPhysicsSystem {
             vprevpos[i] = tmp;
         }
     }
-#define min(a,b) (a<b ? a : b)
-#define max(a,b) (a>b ? a : b)
-#define clamp(x,l,h) (min(h,max(l,x)))
+#define clamp(x,l,h) (std::min(h,std::max(l,x)))
     void keepVerticesInsideScreen() {
-        for(size_t i=0 ; i<vcount ; ++i) {
+        for(index i=0 ; i<vcount ; ++i) {
             vpos[i].x = clamp(vpos[i].x, T(0), screen_size.x);
             vpos[i].y = clamp(vpos[i].y, T(0), screen_size.y);
         }
     }
     void edgeCorrectionStep() {
-        //UpdateEdges();
-        for(size_t i=0 ; i<ecount ; ++i) {
-        
+        for(index i=0 ; i<ecount ; ++i) {
+            vec2<T> &v1pos = vpos[evert[i].v1];
+            vec2<T> &v2pos = vpos[evert[i].v2];
+            vec2<T>  v1v2  = v2pos - v1pos;
+            T diff = norm(v1v2) - elength[i];
+            v1v2 = normalize(v1v2);
+            v1pos += (v1v2*diff)/2;
+            v2pos -= (v1v2*diff)/2;
         }
     }
     void recomputeCentersOfMass() {
-        /*
-        for(size_t i=0 ; i<vcount ; ++i) {
-            CalculateCenter();
+        for(index i=0 ; i<bcount ; ++i) {
+            bcenter[i] = vec2<T>(0,0);
+            for(index v=0 ; v<bvertcount[i] ; ++v)
+                bcenter[i] += vpos[bvert[i][v]];
+            bcenter[i] /= bvertcount[i];
         }
-        */
     }
+    typedef struct {
+        T depth;
+        vec2<T> normal;
+        index edge, vert;
+    } collision_info;
+    bool detectCollision(collision_info *ci, index b1, index b2) {
+        return false;
+    }
+    void processCollision(const collision_info *ci, index b1, index b2) {}
     void processBodyCollisions() {
-        /*
-        if(DetectCollision(B1,B2))
-            ProcessCollision();
-        */
+        for(index b1=0 ; b1<bcount ; ++b1) for(index b2=0 ; b2<bcount ; ++b2) {
+            if(b1 == b2)
+                continue;
+            collision_info ci;
+            if(detectCollision(&ci, b1, b2))
+                processCollision(&ci, b1, b2);
+        }
     }
     void iterateCollisions() {
         // No specific reason for it to stay the same. Could change dynamically.
@@ -127,14 +170,13 @@ struct VerletPhysicsSystem {
     void update() {
         integrateNewPositions();
         iterateCollisions();
-        //iterateCollisions();
     }
 
     void renderSDL2(SDL_Renderer *rdr, RT interp=1) const {
         SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
         //Render each edge...
-        for(size_t i=0 ; i<ecount ; ++i) {
-            size_t v1 = evert[i].v1, v2 = evert[i].v2;
+        for(index i=0 ; i<ecount ; ++i) {
+            index v1 = evert[i].v1, v2 = evert[i].v2;
             vec2<int> a, b;
             a.x = RT(vprevpos[v1].x) + interp*RT(vpos[v1].x - vprevpos[v1].x);
             a.y = RT(vprevpos[v1].y) + interp*RT(vpos[v1].y - vprevpos[v1].y);
@@ -144,7 +186,7 @@ struct VerletPhysicsSystem {
         }
         SDL_SetRenderDrawColor(rdr,   0, 255, 0, 255);
         // Ugly way of rendering vertices.
-        for(size_t i=0 ; i<vcount ; ++i)
+        for(index i=0 ; i<vcount ; ++i)
             for(int y=-1 ; y<=1 ; ++y)
                 for(int x=-1 ; x<=1 ; ++x) {
                     vec2<int> ipos;

@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     );
 
 #define TEST TestVerlet
-    TEST::TEST test1(boulette::vec2<TEST::q>(win_w, win_h));
+    TEST::TEST test1(TEST::unitv2(win_w, win_h));
     g_update_dt_ms = 50;
     SDL_AddTimer(g_update_dt_ms, timer_callback, (void*)TEST::updateFixedStepSimulationBit);
 

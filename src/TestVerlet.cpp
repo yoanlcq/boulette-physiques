@@ -15,7 +15,7 @@ const uintptr_t updateFixedStepSimulationBit(0x800);
 
 #define hope assert
 
-TestVerlet::TestVerlet(vec2<q> screen_size) : 
+TestVerlet::TestVerlet(unitv2 screen_size) : 
     m_shouldQuit(false), tick(0), wasPreparedToRender(false),
     verletSys(screen_size) {}
 

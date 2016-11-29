@@ -21,6 +21,7 @@ struct vec2 {
         //std::cout << "norm(): sqrt(" << sqnorm << ") = " << sq << std::endl;
         return sq; 
     }
+    friend vec2 normalize(const vec2 &u) { return u/norm(u); }
     friend T sqrNorm(const vec2 &u) { 
         /*
         std::cout << "sqrNorm():u.x=" << u.x << std::endl;

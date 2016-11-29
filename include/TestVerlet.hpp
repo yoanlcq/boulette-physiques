@@ -11,7 +11,10 @@ namespace TestVerlet {
 extern const uintptr_t updateFixedStepSimulationBit;
 
 typedef boulette::q<24,8> q;
-typedef boulette::VerletPhysicsSystem<q,q> VerletSys;
+typedef int unit;
+typedef q real;
+typedef boulette::vec2<unit> unitv2;
+typedef boulette::VerletPhysicsSystem<unit,real> VerletSys;
 
 class TestVerlet {
 protected:
@@ -20,7 +23,7 @@ protected:
     bool wasPreparedToRender;
     VerletSys verletSys;
 public:
-     TestVerlet(boulette::vec2<q> screen_size);
+     TestVerlet(unitv2 screen_size);
     ~TestVerlet();
     bool shouldQuit() const;
     void prepareRenderSDL2(SDL_Renderer *rdr);
