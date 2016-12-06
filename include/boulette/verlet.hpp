@@ -121,8 +121,19 @@ struct VerletPhysicsSystem {
         _mm_free(vaccel);
         _mm_free(vpos);
         _mm_free(vprevpos);
+        _mm_free(vcolor);
         _mm_free(evert);
         _mm_free(elength);
+
+        for(index i=0 ; i<bcount ; ++i) {
+            _mm_free(bvert[i]);
+            _mm_free(bedge[i]);
+        }
+        _mm_free(bcenter   );
+        _mm_free(bvertcount);
+        _mm_free(bedgecount);
+        _mm_free(bvert     );
+        _mm_free(bedge     );
     }
 
     void integrateNewPositions() {
@@ -147,10 +158,11 @@ struct VerletPhysicsSystem {
             vec2<T> &v1pos = vpos[evert[i].v1];
             vec2<T> &v2pos = vpos[evert[i].v2];
             vec2<T>  v1v2  = v2pos - v1pos;
-            T diff = norm(v1v2) - elength[i];
-            v1v2 = normalize(v1v2);
-            v1pos += (v1v2*diff)/2;
-            v2pos -= (v1v2*diff)/2;
+            T v1v2_len = norm(v1v2);
+            T diff = v1v2_len - elength[i];
+            v1v2  /= v1v2_len;
+            v1pos += (v1v2*diff)/T(2);
+            v2pos -= (v1v2*diff)/T(2);
         }
     }
     void recomputeCentersOfMass() {
@@ -181,8 +193,8 @@ struct VerletPhysicsSystem {
     }
     void iterateCollisions() {
         // No specific reason for it to stay the same. Could change dynamically.
-        static const size_t iteration_count(10);
-        for(size_t i=0 ; i<iteration_count ; ++i) {
+        static const uint_fast32_t iteration_count(10);
+        for(uint_fast32_t i=0 ; i<iteration_count ; ++i) {
             keepVerticesInsideScreen();
             edgeCorrectionStep();
             recomputeCentersOfMass();
@@ -225,12 +237,8 @@ struct VerletPhysicsSystem {
         SDL_SetRenderDrawColor(rdr,   0, 255, 0, 255);
         // Ugly way of rendering vertices.
         for(index i=0 ; i<vcount ; ++i) {
-            SDL_SetRenderDrawColor(rdr, 
-                vcolor[i].r,
-                vcolor[i].g,
-                vcolor[i].b,
-                vcolor[i].a
-            );
+            SDL_SetRenderDrawColor(rdr, vcolor[i].r, vcolor[i].g, vcolor[i].b,
+                                        vcolor[i].a);
             for(int y=-1 ; y<=1 ; ++y) {
                 for(int x=-1 ; x<=1 ; ++x) {
                     vec2<int> ipos;
