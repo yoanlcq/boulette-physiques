@@ -6,13 +6,29 @@
 
 namespace boulette {
 
+// This system is implemented using gamedev.net's article 
+// "A Verlet based approach for 2D game physics" as a reference.
+//
+// http://www.gamedev.net/page/resources/_/technical/math-and-physics/a-verlet-based-approach-for-2d-game-physics-r2714
+//
+// The code was rewritten by me in order to match better the 
+// Data-Oriented Design mindset (which, however, I can't claim to have fully).
+//
+// The following improvements were made :
+// - Sets of data that are often accessed together are packed in tight
+//   arrays. (TODO: example ?)
+// - Arrays are aligned on a 16-byte boundary, thanks to _mm_malloc().
+//   The compiler can thus generate aligned SSE2 instructions (such as movdqa, 
+//   instead of the slower movdqu).
+//   However I haven't been able to prove it via disassembly. It was easy
+//   on earlier experiments in C I did, though.
 #define THIS_AINT_GONNA_BE_DEFINED
 #ifdef THIS_AINT_GONNA_BE_DEFINED
 // T is the space type, RT is expected to be a real-number type.
 template <typename T, typename RT>
 struct VerletPhysicsSystem {
 
-    typedef size_t index;
+    typedef uint_fast32_t index;
     typedef struct {index v1, v2;} evert_s;
 
     vec2<T>  screen_size; // Keep vertices inside for debugging
