@@ -1,0 +1,30 @@
+Reading symbols from a.out...done.
+Dump of assembler code for function u32_mass_add:
+94	void u32_mass_add(u32v4 *ary, size_t cnt, uint32_t val) {
+
+95	    u32v4 val4 = { val, val, val, val };
+   0x00000000004007e4 <+4>:	mov    DWORD PTR [rsp-0xc],edx
+   0x00000000004007ec <+12>:	movd   xmm2,DWORD PTR [rsp-0xc]
+   0x00000000004007f2 <+18>:	mov    rax,rsi
+   0x00000000004007f5 <+21>:	shl    rax,0x4
+   0x00000000004007f9 <+25>:	pshufd xmm1,xmm2,0x0
+   0x00000000004007fe <+30>:	add    rax,rdi
+
+96	    for(uint_fast32_t i=0 ; i<(cnt+3)/4 ; ++i)
+   0x00000000004007e0 <+0>:	add    rsi,0x3
+   0x00000000004007e8 <+8>:	shr    rsi,0x2
+   0x0000000000400801 <+33>:	test   rsi,rsi
+   0x0000000000400804 <+36>:	je     0x400825 <u32_mass_add+69>
+   0x0000000000400806 <+38>:	nop    WORD PTR cs:[rax+rax*1+0x0]
+   0x0000000000400820 <+64>:	cmp    rdi,rax
+   0x0000000000400823 <+67>:	jne    0x400810 <u32_mass_add+48>
+   0x0000000000400825 <+69>:	repz ret 
+   0x0000000000400827:	nop    WORD PTR [rax+rax*1+0x0]
+
+97	        ary[i] += val4;
+   0x0000000000400810 <+48>:	movdqa xmm0,XMMWORD PTR [rdi]
+   0x0000000000400814 <+52>:	add    rdi,0x10
+   0x0000000000400818 <+56>:	paddd  xmm0,xmm1
+   0x000000000040081c <+60>:	movaps XMMWORD PTR [rdi-0x10],xmm0
+
+End of assembler dump.

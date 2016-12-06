@@ -1,0 +1,83 @@
+Reading symbols from a.out...done.
+Dump of assembler code for function u32_mass_add:
+64	void u32_mass_add(uint32_t *ary, size_t cnt, uint32_t val) {
+   0x00000000004008e3 <+3>:	push   rbx
+
+65	    for(uint_fast32_t i=0 ; i<cnt ; ++i)
+   0x00000000004008e0 <+0>:	test   rsi,rsi
+   0x00000000004008e4 <+4>:	je     0x4009c2 <u32_mass_add+226>
+   0x00000000004008ea <+10>:	mov    rax,rdi
+   0x00000000004008ed <+13>:	and    eax,0xf
+   0x00000000004008f0 <+16>:	shr    rax,0x2
+   0x00000000004008f4 <+20>:	neg    rax
+   0x00000000004008f7 <+23>:	and    eax,0x3
+   0x00000000004008fa <+26>:	cmp    rax,rsi
+   0x00000000004008fd <+29>:	cmova  rax,rsi
+   0x0000000000400901 <+33>:	cmp    rsi,0x4
+   0x0000000000400905 <+37>:	ja     0x4009c8 <u32_mass_add+232>
+   0x000000000040090b <+43>:	mov    rax,rsi
+   0x0000000000400914 <+52>:	mov    ecx,0x1
+   0x0000000000400919 <+57>:	je     0x40093f <u32_mass_add+95>
+   0x0000000000400922 <+66>:	mov    ecx,0x2
+   0x0000000000400927 <+71>:	je     0x40093f <u32_mass_add+95>
+   0x0000000000400930 <+80>:	mov    ecx,0x3
+   0x0000000000400935 <+85>:	jne    0x40093f <u32_mass_add+95>
+   0x000000000040093a <+90>:	mov    ecx,0x4
+   0x000000000040093f <+95>:	cmp    rsi,rax
+   0x0000000000400942 <+98>:	je     0x4009c2 <u32_mass_add+226>
+   0x0000000000400944 <+100>:	mov    r11,rsi
+   0x0000000000400947 <+103>:	lea    r9,[rsi-0x1]
+   0x000000000040094b <+107>:	sub    r11,rax
+   0x000000000040094e <+110>:	lea    r8,[r11-0x4]
+   0x0000000000400952 <+114>:	sub    r9,rax
+   0x0000000000400955 <+117>:	shr    r8,0x2
+   0x0000000000400959 <+121>:	add    r8,0x1
+   0x000000000040095d <+125>:	cmp    r9,0x2
+   0x0000000000400961 <+129>:	lea    rbx,[r8*4+0x0]
+   0x0000000000400969 <+137>:	jbe    0x4009a7 <u32_mass_add+199>
+   0x000000000040096b <+139>:	mov    DWORD PTR [rsp-0x4],edx
+   0x000000000040096f <+143>:	lea    r10,[rdi+rax*4]
+   0x0000000000400973 <+147>:	xor    r9d,r9d
+   0x0000000000400976 <+150>:	movd   xmm2,DWORD PTR [rsp-0x4]
+   0x000000000040097c <+156>:	xor    eax,eax
+   0x000000000040097e <+158>:	pshufd xmm1,xmm2,0x0
+   0x00000000004009a7 <+199>:	lea    rax,[rcx+0x1]
+   0x00000000004009ae <+206>:	cmp    rsi,rax
+   0x00000000004009b1 <+209>:	jbe    0x4009c2 <u32_mass_add+226>
+   0x00000000004009b3 <+211>:	add    rcx,0x2
+   0x00000000004009ba <+218>:	cmp    rsi,rcx
+   0x00000000004009bd <+221>:	jbe    0x4009c2 <u32_mass_add+226>
+   0x00000000004009d1 <+241>:	xor    ecx,ecx
+   0x00000000004009d3 <+243>:	jmp    0x400944 <u32_mass_add+100>
+   0x00000000004009d8:	nop    DWORD PTR [rax+rax*1+0x0]
+
+66	        ary[i] += val;
+   0x000000000040090e <+46>:	add    DWORD PTR [rdi],edx
+   0x0000000000400910 <+48>:	cmp    rax,0x1
+   0x000000000040091b <+59>:	add    DWORD PTR [rdi+0x4],edx
+   0x000000000040091e <+62>:	cmp    rax,0x2
+   0x0000000000400929 <+73>:	add    DWORD PTR [rdi+0x8],edx
+   0x000000000040092c <+76>:	cmp    rax,0x4
+   0x0000000000400937 <+87>:	add    DWORD PTR [rdi+0xc],edx
+   0x0000000000400983 <+163>:	movdqa xmm0,XMMWORD PTR [r10+rax*1]
+   0x0000000000400989 <+169>:	add    r9,0x1
+   0x000000000040098d <+173>:	paddd  xmm0,xmm1
+   0x0000000000400991 <+177>:	movaps XMMWORD PTR [r10+rax*1],xmm0
+   0x0000000000400996 <+182>:	add    rax,0x10
+   0x000000000040099a <+186>:	cmp    r8,r9
+   0x000000000040099d <+189>:	ja     0x400983 <u32_mass_add+163>
+   0x000000000040099f <+191>:	add    rcx,rbx
+   0x00000000004009a2 <+194>:	cmp    r11,rbx
+   0x00000000004009a5 <+197>:	je     0x4009c2 <u32_mass_add+226>
+   0x00000000004009ab <+203>:	add    DWORD PTR [rdi+rcx*4],edx
+   0x00000000004009b7 <+215>:	add    DWORD PTR [rdi+rax*4],edx
+   0x00000000004009bf <+223>:	add    DWORD PTR [rdi+rcx*4],edx
+
+67	}
+   0x00000000004009c2 <+226>:	pop    rbx
+   0x00000000004009c3 <+227>:	ret    
+   0x00000000004009c4 <+228>:	nop    DWORD PTR [rax+0x0]
+   0x00000000004009c8 <+232>:	test   rax,rax
+   0x00000000004009cb <+235>:	jne    0x40090e <u32_mass_add+46>
+
+End of assembler dump.
