@@ -11,7 +11,7 @@ namespace TestVerlet {
 extern const uintptr_t updateFixedStepSimulationBit;
 
 typedef boulette::q<24,8> q;
-typedef int unit;
+typedef q unit;
 typedef q real;
 typedef boulette::vec2<unit> unitv2;
 typedef boulette::VerletPhysicsSystem<unit,real> VerletSys;

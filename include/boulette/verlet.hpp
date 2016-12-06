@@ -29,17 +29,19 @@ template <typename T, typename RT>
 struct VerletPhysicsSystem {
 
     typedef uint_fast32_t index;
+    typedef struct {uint32_t r:8, g:8, b:8, a:8; } rgba32;
     typedef struct {index v1, v2;} evert_s;
 
     vec2<T>  screen_size; // Keep vertices inside for debugging
-    vec2<T>  gravity;  // Rather see it as a force that affects all bodies
-    RT       timestep; // The simulation's speed - 1 is the norm.
-    index    vcount;   // Total number of vertices.
-    vec2<T> *vaccel;   // All vertex accelerations.
-    vec2<T> *vpos;     // All vertex positions.
-    vec2<T> *vprevpos; // All vertex previous positions.
-    index    ecount;   // Total number of edges.
-    evert_s *evert; // For each edge, two indices to vertices.
+    vec2<T>  gravity;     // Rather see it as a force that affects all bodies
+    RT       timestep;    // The simulation's speed - 1 is the norm.
+    index    vcount;      // Total number of vertices.
+    vec2<T> *vaccel;      // For each vertex, its acceleration.
+    vec2<T> *vpos;        // For each vertex, its position.
+    vec2<T> *vprevpos;    // For each vertex, its previous position.
+    rgba32  *vcolor;      // For each vertex, its color.
+    index    ecount;      // Total number of edges.
+    evert_s *evert;       // For each edge, two indices to vertices.
     T       *elength;     // For each edge, its length.
     // Each array that contains data for the edges is split into
     // 2 sections : edges that are occluded, and the others.
@@ -51,12 +53,12 @@ struct VerletPhysicsSystem {
     // And over all those that aren't :
     //     for(index i=0 ; i<e_occluded_start ; ++i)
     index    e_occluded_start;
-    index    bcount;     // Total number of Bodies.
-    vec2<T> *bcenter;    // For each body, its center of mass.
-    index   *bvertcount; // For each body, its vertex count.
-    index  **bvert;      // For each body, its vertex indices.
-    index   *bedgecount; // For each body, its edge count.
-    index  **bedge;      // For each body, its edge indices.
+    index    bcount;      // Total number of Bodies.
+    vec2<T> *bcenter;     // For each body, its center of mass.
+    index   *bvertcount;  // For each body, its vertex count.
+    index  **bvert;       // For each body, its vertex indices.
+    index   *bedgecount;  // For each body, its edge count.
+    index  **bedge;       // For each body, its edge indices.
 
     VerletPhysicsSystem(vec2<T> screen_size) 
       : screen_size(screen_size),
@@ -67,8 +69,12 @@ struct VerletPhysicsSystem {
         vaccel   = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
         vpos     = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
         vprevpos = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
+        vcolor   =  (rgba32*) _mm_malloc(vcount*sizeof(rgba32),  16);
 
         memset(vaccel, 0, vcount*sizeof(*vaccel));
+        memset(vcolor, 0, vcount*sizeof(*vcolor));
+        for(index i=0 ; i<vcount ; ++i)
+            vcolor[i].g = 255;
 
         vpos[0] = vec2<T>(50, 50);
         vpos[1] = vec2<T>(90, 50);
@@ -188,6 +194,22 @@ struct VerletPhysicsSystem {
         iterateCollisions();
     }
 
+    index pickClosestScreenSpaceVertex(vec2<T> cursor) const {
+        // Brute-force linear search FTW.
+        // It is an error to call this function if there are no vertices.
+        assert(vcount > 0);
+        index closest_i = 0;
+        T min_len = norm(cursor - vpos[closest_i]);
+        for(index i=1 ; i<vcount ; ++i) {
+            T next_len = norm(cursor - vpos[i]);
+            if(min_len <= next_len)
+                continue;
+            min_len = next_len;
+            closest_i = i;
+        }
+        return closest_i;
+    }
+
     void renderSDL2(SDL_Renderer *rdr, RT interp=1) const {
         SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
         //Render each edge...
@@ -202,14 +224,22 @@ struct VerletPhysicsSystem {
         }
         SDL_SetRenderDrawColor(rdr,   0, 255, 0, 255);
         // Ugly way of rendering vertices.
-        for(index i=0 ; i<vcount ; ++i)
-            for(int y=-1 ; y<=1 ; ++y)
+        for(index i=0 ; i<vcount ; ++i) {
+            SDL_SetRenderDrawColor(rdr, 
+                vcolor[i].r,
+                vcolor[i].g,
+                vcolor[i].b,
+                vcolor[i].a
+            );
+            for(int y=-1 ; y<=1 ; ++y) {
                 for(int x=-1 ; x<=1 ; ++x) {
                     vec2<int> ipos;
                     ipos.x = RT(vprevpos[i].x) + interp*RT(vpos[i].x - vprevpos[i].x);
                     ipos.y = RT(vprevpos[i].y) + interp*RT(vpos[i].y - vprevpos[i].y);
                     SDL_RenderDrawPoint(rdr, ipos.x+x, ipos.y+y);
                 }
+            }
+        }
     }
 };
 
