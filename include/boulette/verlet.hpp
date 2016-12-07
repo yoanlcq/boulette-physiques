@@ -129,15 +129,16 @@ struct VerletPhysicsSystem {
             _mm_free(bvert[i]);
             _mm_free(bedge[i]);
         }
+        _mm_free(bvert     );
+        _mm_free(bedge     );
         _mm_free(bcenter   );
         _mm_free(bvertcount);
         _mm_free(bedgecount);
-        _mm_free(bvert     );
-        _mm_free(bedge     );
     }
 
     void integrateNewPositions() {
         const RT sq_timestep = timestep*timestep;
+        //vpos[0] = vec2<T>(500, 90);
         for(index i=0 ; i<vcount ; ++i) {
             vaccel[i] = gravity; // Apply all forces
             // Then integrate.
@@ -154,15 +155,24 @@ struct VerletPhysicsSystem {
         }
     }
     void edgeCorrectionStep() {
+        // XXX
+        // Don't keep it like this in the final code !!
+        // This is required when one vertex (here, the first)
+        // needs to follow the mouse : We need to reset its position
+        // to the desired location at each edge correction step.
+        // If we don't, edges behave like elastic bands.
+        int x, y;
+        SDL_GetMouseState(&x, &y);
+        vpos[0] = vec2<T>(x, y);
+
         for(index i=0 ; i<ecount ; ++i) {
             vec2<T> &v1pos = vpos[evert[i].v1];
             vec2<T> &v2pos = vpos[evert[i].v2];
             vec2<T>  v1v2  = v2pos - v1pos;
             T v1v2_len = norm(v1v2);
             T diff = v1v2_len - elength[i];
-            v1v2  /= v1v2_len;
-            v1pos += (v1v2*diff)/T(2);
-            v2pos -= (v1v2*diff)/T(2);
+            v1pos += (v1v2*diff)/(T(2)*v1v2_len);
+            v2pos -= (v1v2*diff)/(T(2)*v1v2_len);
         }
     }
     void recomputeCentersOfMass() {
@@ -224,6 +234,7 @@ struct VerletPhysicsSystem {
 
     void renderSDL2(SDL_Renderer *rdr, RT interp=1) const {
         SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
+
         //Render each edge...
         for(index i=0 ; i<ecount ; ++i) {
             index v1 = evert[i].v1, v2 = evert[i].v2;
@@ -233,6 +244,14 @@ struct VerletPhysicsSystem {
             b.x = RT(vprevpos[v2].x) + interp*RT(vpos[v2].x - vprevpos[v2].x);
             b.y = RT(vprevpos[v2].y) + interp*RT(vpos[v2].y - vprevpos[v2].y);
             SDL_RenderDrawLine(rdr, a.x, a.y, b.x, b.y);
+            /*
+            if(!i) {
+                std::cout << norm(b-a) << "  ";
+                vec2<T> &v1pos = vpos[evert[i].v1];
+                vec2<T> &v2pos = vpos[evert[i].v2];
+                std::cout << norm(v2pos-v1pos) << std::endl;
+            }
+            */
         }
         SDL_SetRenderDrawColor(rdr,   0, 255, 0, 255);
         // Ugly way of rendering vertices.
