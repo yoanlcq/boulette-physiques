@@ -52,19 +52,7 @@ void TestVerlet::handleSDL2Event(const SDL_Event *e) {
 
 void TestVerlet::updateFixedStepSimulation() {
     ++tick;
-
     verletSys.update();
-
-    int x, y;
-    SDL_GetMouseState(&x, &y);
-    for(uint_fast32_t i=0 ; i<verletSys.vcount ; ++i)
-        verletSys.vcolor[i].r = 0;
-    size_t idx = verletSys.pickClosestScreenSpaceVertex(unitv2(x,y));
-    if(norm(verletSys.vpos[idx] - unitv2(x,y)) < unit(300)) {
-        verletSys.vcolor[idx].r = 255;
-        verletSys.vpos[idx]  = unitv2(x,y);
-        //verletSys.vprevpos[idx]  = unitv2(x,y);
-    }
 }
 
 void TestVerlet::prepareRenderSDL2(SDL_Renderer *rdr) {

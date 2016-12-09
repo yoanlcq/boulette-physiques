@@ -22,15 +22,26 @@ namespace boulette {
 //   instead of the slower movdqu).
 //   However I haven't been able to prove it via disassembly. It was easy
 //   on earlier experiments in C I did, though.
-#define THIS_AINT_GONNA_BE_DEFINED
-#ifdef THIS_AINT_GONNA_BE_DEFINED
+
+
+// XXX Actually implement these !
+#define malloc_align16(...) malloc(__VA_ARGS__)
+#define realloc_align16(...) realloc(__VA_ARGS__)
+#define free_align16(...) free(__VA_ARGS__)
+
 // T is the space type, RT is expected to be a real-number type.
 template <typename T, typename RT>
 struct VerletPhysicsSystem {
 
     typedef uint_fast32_t index;
-    typedef struct {uint32_t r:8, g:8, b:8, a:8; } rgba32;
-    typedef struct {index v1, v2;} evert_s;
+    struct rgba32 {
+        uint32_t r:8, g:8, b:8, a:8; 
+        rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a) {}
+    };
+    struct evert_s {
+        index v1, v2;
+        evert_s(index v1, index v2) : v1(v1), v2(v2) {}
+    };
 
     vec2<T>  screen_size; // Keep vertices inside for debugging
     vec2<T>  gravity;     // Rather see it as a force that affects all bodies
@@ -60,85 +71,135 @@ struct VerletPhysicsSystem {
     index   *bedgecount;  // For each body, its edge count.
     index  **bedge;       // For each body, its edge indices.
 
+
+    // We could add __restrict to the two last parameters, but the user might
+    // actually want them to be aliased.
+    void addRigidBoxes(index nboxcount, vec2<T> *centers, vec2<T> *half_sizes) {
+        
+        // XXX Actually 5 edges per box instead of 6 could do the job.
+        vpos       = (vec2<T>*) realloc_align16(vpos      , (vcount+nboxcount*4)*sizeof(*vpos      ));
+        vprevpos   = (vec2<T>*) realloc_align16(vprevpos  , (vcount+nboxcount*4)*sizeof(*vprevpos  ));
+        vaccel     = (vec2<T>*) realloc_align16(vaccel    , (vcount+nboxcount*4)*sizeof(*vaccel    ));
+        vcolor     = (rgba32*)  realloc_align16(vcolor    , (vcount+nboxcount*4)*sizeof(*vcolor    ));
+        evert      = (evert_s*) realloc_align16(evert     , (ecount+nboxcount*6)*sizeof(*evert     ));
+        elength    = (T*)       realloc_align16(elength   , (ecount+nboxcount*6)*sizeof(*elength   ));
+        bcenter    = (vec2<T>*) realloc_align16(bcenter   , (bcount+nboxcount)  *sizeof(*bcenter   ));
+        bvertcount = (index*)   realloc_align16(bvertcount, (bcount+nboxcount)  *sizeof(*bvertcount));
+        bedgecount = (index*)   realloc_align16(bedgecount, (bcount+nboxcount)  *sizeof(*bedgecount));
+        bvert      = (index**)  realloc_align16(bvert     , (bcount+nboxcount)  *sizeof(*bvert     ));
+        bedge      = (index**)  realloc_align16(bedge     , (bcount+nboxcount)  *sizeof(*bedge     ));
+
+        for(index i=0 ; i<nboxcount ; ++i) {
+            vpos[vcount+4*i+0] = vec2<T>(centers[i].x-half_sizes[i].x, centers[i].y+half_sizes[i].y);
+            vpos[vcount+4*i+1] = vec2<T>(centers[i].x+half_sizes[i].x, centers[i].y+half_sizes[i].y);
+            vpos[vcount+4*i+2] = vec2<T>(centers[i].x+half_sizes[i].x, centers[i].y-half_sizes[i].y);
+            vpos[vcount+4*i+3] = vec2<T>(centers[i].x-half_sizes[i].x, centers[i].y-half_sizes[i].y);
+        }
+        for(index i=0 ; i<nboxcount ; ++i) {
+            vcolor[vcount+4*i+0] = rgba32(0,255,0,255);
+            vcolor[vcount+4*i+1] = rgba32(0,255,0,255);
+            vcolor[vcount+4*i+2] = rgba32(0,255,0,255);
+            vcolor[vcount+4*i+3] = rgba32(0,255,0,255);
+        }
+        memcpy(vprevpos+vcount, vpos+vcount, nboxcount*4*sizeof(*vpos));
+        memset(vaccel+vcount, 0, nboxcount*4*sizeof(*vaccel));
+
+        index new_occluded_start = e_occluded_start + 4*nboxcount;
+        memcpy(evert + new_occluded_start, evert + e_occluded_start, (ecount-e_occluded_start)*sizeof(*evert));
+        for(index i=0 ; i<nboxcount ; ++i) {
+            evert[  e_occluded_start+4*i+0] = evert_s(vcount+4*i+0, vcount+4*i+1);
+            evert[  e_occluded_start+4*i+1] = evert_s(vcount+4*i+1, vcount+4*i+2);
+            evert[  e_occluded_start+4*i+2] = evert_s(vcount+4*i+2, vcount+4*i+3);
+            evert[  e_occluded_start+4*i+3] = evert_s(vcount+4*i+3, vcount+4*i+0);
+            evert[new_occluded_start+2*i+0] = evert_s(vcount+4*i+0, vcount+4*i+2);
+            evert[new_occluded_start+2*i+1] = evert_s(vcount+4*i+1, vcount+4*i+3);
+        }
+        for(index i=0 ; i<nboxcount ; ++i) {
+            elength[  e_occluded_start+4*i+0] = norm(vpos[vcount+4*i+0] - vpos[vcount+4*i+1]);
+            elength[  e_occluded_start+4*i+1] = norm(vpos[vcount+4*i+1] - vpos[vcount+4*i+2]);
+            elength[  e_occluded_start+4*i+2] = norm(vpos[vcount+4*i+2] - vpos[vcount+4*i+3]);
+            elength[  e_occluded_start+4*i+3] = norm(vpos[vcount+4*i+3] - vpos[vcount+4*i+0]);
+            elength[new_occluded_start+2*i+0] = norm(vpos[vcount+4*i+0] - vpos[vcount+4*i+2]);
+            elength[new_occluded_start+2*i+1] = norm(vpos[vcount+4*i+1] - vpos[vcount+4*i+3]);
+        }
+
+        for(index i=0 ; i<nboxcount ; ++i) {
+            bvertcount[bcount+i] = 4;
+            bedgecount[bcount+i] = 6;
+            bvert[bcount+i]      = (index*) malloc_align16(bvertcount[bcount+i]*sizeof(index));
+            bedge[bcount+i]      = (index*) malloc_align16(bedgecount[bcount+i]*sizeof(index));
+
+            for(index j=0 ; j<bvertcount[bcount+i] ; ++j)
+                bvert[bcount+i][j] = vcount+4*i+j;
+
+            bedge[bcount+i][0] =   e_occluded_start+4*i+0;
+            bedge[bcount+i][1] =   e_occluded_start+4*i+1;
+            bedge[bcount+i][2] =   e_occluded_start+4*i+2;
+            bedge[bcount+i][3] =   e_occluded_start+4*i+3;
+            bedge[bcount+i][4] = new_occluded_start+2*i+0;
+            bedge[bcount+i][5] = new_occluded_start+2*i+1;
+        }
+        for(index i=0 ; i<nboxcount ; ++i)
+            bcenter[bcount+i] = computeCenterOfMass(i);
+
+        bcount += nboxcount;
+        vcount += 4*nboxcount;
+        ecount += 6*nboxcount;
+        e_occluded_start = new_occluded_start;
+    }
+
     VerletPhysicsSystem(vec2<T> screen_size) 
       : screen_size(screen_size),
         gravity(0, 1), // Not .98, cuz it is rounded to zero if T is integer.
         timestep(1)
     {
-        vcount   = 4;
-        vaccel   = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
-        vpos     = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
-        vprevpos = (vec2<T>*) _mm_malloc(vcount*sizeof(vec2<T>), 16);
-        vcolor   =  (rgba32*) _mm_malloc(vcount*sizeof(rgba32),  16);
+        vpos       = nullptr;
+        vprevpos   = nullptr;
+        vcolor     = nullptr;
+        vaccel     = nullptr;
+        evert      = nullptr;
+        elength    = nullptr;
+        bcenter    = nullptr;
+        bvertcount = nullptr;
+        bedgecount = nullptr;
+        bvert      = nullptr;
+        bedge      = nullptr;
+        vcount     = 0;
+        ecount     = 0;
+        bcount     = 0;
+        e_occluded_start = 0;
 
-        memset(vaccel, 0, vcount*sizeof(*vaccel));
-        memset(vcolor, 0, vcount*sizeof(*vcolor));
-        for(index i=0 ; i<vcount ; ++i)
-            vcolor[i].g = 255;
-
-        vpos[0] = vec2<T>(50, 50);
-        vpos[1] = vec2<T>(90, 50);
-        vpos[2] = vec2<T>(90, 90);
-        vpos[3] = vec2<T>(50, 90);
-
-        static_assert(sizeof *vpos == sizeof *vprevpos, "");
-        memcpy(vprevpos, vpos, vcount*sizeof *vpos);
-
-        ecount  = 6;
-        evert   = (evert_s*) _mm_malloc(ecount*sizeof(evert_s), 16);
-        elength =       (T*) _mm_malloc(ecount*sizeof(T), 16);
-        evert[0].v1 = 0, evert[0].v2 = 1;
-        evert[1].v1 = 1, evert[1].v2 = 2;
-        evert[2].v1 = 2, evert[2].v2 = 3;
-        evert[3].v1 = 3, evert[3].v2 = 0;
-        e_occluded_start = 4;
-        evert[4].v1 = 0, evert[4].v2 = 2;
-        evert[5].v1 = 1, evert[5].v2 = 3;
-
-        for(index i=0 ; i<ecount ; ++i)
-            elength[i] = norm(vpos[evert[i].v2]-vpos[evert[i].v1]);
-
-        bcount     = 1;
-        bcenter    = (vec2<T>*) _mm_malloc(bcount*sizeof(vec2<T>), 16);
-        bvertcount =   (index*) _mm_malloc(bcount*sizeof(index), 16);
-        bedgecount =   (index*) _mm_malloc(bcount*sizeof(index), 16);
-        bvert      =  (index**) _mm_malloc(bcount*sizeof(index*), 16);
-        bedge      =  (index**) _mm_malloc(bcount*sizeof(index*), 16);
-
-        bcenter[0]    = vec2<T>(0,0);
-        bvertcount[0] = 4;
-        bedgecount[0] = 2;
-        bvert[0]      = (index*) _mm_malloc(bvertcount[0]*sizeof(index), 16);
-        bedge[0]      = (index*) _mm_malloc(bedgecount[0]*sizeof(index), 16);
-
-        for(index i=0 ; i<bvertcount[0] ; ++i)
-            bvert[0][i] = i;
-        for(index i=0 ; i<bedgecount[0] ; ++i)
-            bedge[0][i] = i;
+#define BOXCOUNT 10
+        vec2<T> centers[BOXCOUNT], half_sizes[BOXCOUNT];
+        for(uint_fast32_t i=0 ; i<BOXCOUNT ; ++i)
+            centers[i] = vec2<T>(10+i*20, 50);
+        for(uint_fast32_t i=0 ; i<BOXCOUNT ; ++i)
+            half_sizes[i] = vec2<T>(10, 10);
+        addRigidBoxes(BOXCOUNT, centers, half_sizes);
+#undef BOXCOUNT
     }
 
     ~VerletPhysicsSystem() {
-        _mm_free(vaccel);
-        _mm_free(vpos);
-        _mm_free(vprevpos);
-        _mm_free(vcolor);
-        _mm_free(evert);
-        _mm_free(elength);
+        free_align16(vaccel);
+        free_align16(vpos);
+        free_align16(vprevpos);
+        free_align16(vcolor);
+        free_align16(evert);
+        free_align16(elength);
 
         for(index i=0 ; i<bcount ; ++i) {
-            _mm_free(bvert[i]);
-            _mm_free(bedge[i]);
+            free_align16(bvert[i]);
+            free_align16(bedge[i]);
         }
-        _mm_free(bvert     );
-        _mm_free(bedge     );
-        _mm_free(bcenter   );
-        _mm_free(bvertcount);
-        _mm_free(bedgecount);
+        free_align16(bvert     );
+        free_align16(bedge     );
+        free_align16(bcenter   );
+        free_align16(bvertcount);
+        free_align16(bedgecount);
     }
 
     void integrateNewPositions() {
         const RT sq_timestep = timestep*timestep;
-        //vpos[0] = vec2<T>(500, 90);
         for(index i=0 ; i<vcount ; ++i) {
             vaccel[i] = gravity; // Apply all forces
             // Then integrate.
@@ -175,13 +236,11 @@ struct VerletPhysicsSystem {
             v2pos -= (v1v2*diff)/(T(2)*v1v2_len);
         }
     }
-    void recomputeCentersOfMass() {
-        for(index i=0 ; i<bcount ; ++i) {
-            bcenter[i] = vec2<T>(0,0);
-            for(index v=0 ; v<bvertcount[i] ; ++v)
-                bcenter[i] += vpos[bvert[i][v]];
-            bcenter[i] /= bvertcount[i];
-        }
+    vec2<T> computeCenterOfMass(index i) {
+        vec2<T> center(0,0);
+        for(index v=0 ; v<bvertcount[i] ; ++v)
+            center += vpos[bvert[i][v]];
+        return center / bvertcount[i];
     }
     typedef struct {
         T depth;
@@ -207,7 +266,8 @@ struct VerletPhysicsSystem {
         for(uint_fast32_t i=0 ; i<iteration_count ; ++i) {
             keepVerticesInsideScreen();
             edgeCorrectionStep();
-            recomputeCentersOfMass();
+            for(index b=0 ; b<bcount ; ++b)
+                bcenter[b] = computeCenterOfMass(b);
             processBodyCollisions();
         }
     }
@@ -269,8 +329,6 @@ struct VerletPhysicsSystem {
         }
     }
 };
-
-#endif
 
 
 
