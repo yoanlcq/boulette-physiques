@@ -55,6 +55,7 @@ struct sse_array {
 // - Collisions
 // - Text GUI
 // - Sprites
+// - Coordinate shift from simulation-space to view-space
 
 
 // XXX Actually implement these !
