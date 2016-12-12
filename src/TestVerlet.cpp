@@ -17,7 +17,49 @@ const uintptr_t updateFixedStepSimulationBit(0x800);
 
 TestVerlet::TestVerlet(unitv2 screen_size) : 
     m_shouldQuit(false), tick(0), wasPreparedToRender(false),
-    verletSys(screen_size) {}
+    verletSys(screen_size, 1) {
+
+#define COLCOUNT 4
+    VerletSys::rgba32 cols[COLCOUNT] = {
+        VerletSys::rgba32(255, 000, 000, 255),
+        VerletSys::rgba32(255, 255, 000, 255),
+        VerletSys::rgba32(000, 255, 000, 255),
+        VerletSys::rgba32(000, 000, 255, 255)
+    };
+
+    VerletSys::VerletRigidBody box;
+    box.vertices.push_back(VerletSys::VerletVertex(unitv2(-30, -30), cols[0]));
+    box.vertices.push_back(VerletSys::VerletVertex(unitv2( 30, -30), cols[1]));
+    box.vertices.push_back(VerletSys::VerletVertex(unitv2( 30,  30), cols[2]));
+    box.vertices.push_back(VerletSys::VerletVertex(unitv2(-30,  30), cols[3]));
+    box.edges.push_back(VerletSys::evert_s(0, 1));
+    box.edges.push_back(VerletSys::evert_s(1, 2));
+    box.edges.push_back(VerletSys::evert_s(2, 3));
+    box.edges.push_back(VerletSys::evert_s(3, 0));
+    box.occluded_edges.push_back(VerletSys::evert_s(0, 2));
+    box.occluded_edges.push_back(VerletSys::evert_s(1, 3));
+#define BOXCOUNT 4
+    unitv2 centers[BOXCOUNT];
+    for(uint_fast32_t i=0 ; i<BOXCOUNT ; ++i)
+        centers[i] = unitv2(60 + i*150, 60);
+
+#define DISKSEGCOUNT 42
+    VerletSys::VerletRigidBody disk;
+    for(uint_fast32_t i=0 ; i<DISKSEGCOUNT ; ++i) {
+        float r = 60.f, theta = M_PI*2.f*i/(float)DISKSEGCOUNT;
+        unitv2 pos(r*cosf(theta), r*sinf(theta));
+        disk.vertices.push_back(VerletSys::VerletVertex(pos, cols[i%COLCOUNT]));
+        disk.edges.push_back(VerletSys::evert_s(i, (i+1)%DISKSEGCOUNT));
+        //disk.occluded_edges.push_back(VerletSys::evert_s(i, (i+(DISKSEGCOUNT/2))%DISKSEGCOUNT));
+        disk.edges.push_back(VerletSys::evert_s(i, (i+(DISKSEGCOUNT/2))%DISKSEGCOUNT));
+        //for(uint_fast32_t j=0 ; j<DISKSEGCOUNT ; ++j)
+            //if(j != i)
+                //disk.edges.push_back(VerletSys::evert_s(i, j));
+    }
+
+    verletSys.addRigidBodies(disk, BOXCOUNT, centers);
+    verletSys.addRigidBodies( box, BOXCOUNT, centers);
+}
 
 TestVerlet::~TestVerlet() {}
 
@@ -49,7 +91,6 @@ void TestVerlet::handleSDL2Event(const SDL_Event *e) {
     case SDL_MOUSEWHEEL:       break;
     }
 }
-
 void TestVerlet::updateFixedStepSimulation() {
     ++tick;
     verletSys.update();
