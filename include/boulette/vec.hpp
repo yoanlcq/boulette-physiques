@@ -37,7 +37,7 @@ struct vec2 {
     friend vec2 operator- (const vec2 &lhs, const vec2 &rhs) {return vec2(lhs.x-rhs.x, lhs.y-rhs.y);}
     friend vec2 operator* (const vec2 &lhs, const vec2 &rhs) {return vec2(lhs.x*rhs.x, lhs.y*rhs.y);}
     friend vec2 operator/ (const vec2 &lhs, const vec2 &rhs) {return vec2(lhs.x/rhs.x, lhs.y/rhs.y);}
-    vec2  operator- () const { return vec2(0)-*this;}
+    vec2  operator- () const { return vec2(0,0)-*this;}
     vec2& operator+=(const vec2& rhs) {*this = (*this)+rhs; return *this;}
     vec2& operator-=(const vec2& rhs) {*this = (*this)-rhs; return *this;}
     vec2& operator*=(const vec2& rhs) {*this = (*this)*rhs; return *this;}

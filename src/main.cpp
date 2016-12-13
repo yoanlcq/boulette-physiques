@@ -36,13 +36,13 @@ int main(int argc, char *argv[]) {
     SDL_Renderer *rdr = SDL_CreateRenderer(win, -1, 
         SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
     );
+    SDL_SetRenderDrawBlendMode(rdr, SDL_BLENDMODE_BLEND);
 
 #define TEST TestVerlet
-    TEST::TEST test1(TEST::unitv2(win_w, win_h));
+    TEST::TEST test1(rdr, TEST::unitv2(win_w, win_h));
     g_update_dt_ms = 50;
     SDL_AddTimer(g_update_dt_ms, timer_callback, (void*)TEST::updateFixedStepSimulationBit);
 
-    test1.prepareRenderSDL2(rdr);
     do {
         SDL_Event e;
         while(SDL_PollEvent(&e))

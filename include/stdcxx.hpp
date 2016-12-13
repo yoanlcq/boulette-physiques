@@ -13,5 +13,6 @@
 #include <sstream>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 #endif /* STDCXX_HPP */

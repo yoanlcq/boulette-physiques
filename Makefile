@@ -24,9 +24,10 @@ cxxflags := $(strip \
 ldlibs := -lSDL2 -lSDL2_ttf -lfreetype
 cxxfiles := $(call rglob,src,*.cpp)
 ofiles := $(patsubst src/%.cpp,build/%.o,$(cxxfiles))
+exe := bin/test_verlet
 
 .PHONY: all clean re mrproper
-all: bin/toast
+all: $(exe)
 clean:
 	rm -rf build
 re: clean all
@@ -36,7 +37,7 @@ build/%.o: src/%.cpp
 	@mkdir -p $(@D)
 	$(cxx) $(cxxflags) -c $< -o $@
 
-bin/toast: $(ofiles)
+$(exe): $(ofiles)
 	@mkdir -p $(@D)
 	$(cxx) $(cxxflags) $^ -o $@ $(ldlibs)
 

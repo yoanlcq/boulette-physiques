@@ -53,19 +53,17 @@ const uintptr_t updateFixedStepSimulationBit(0x800);
 
 #define hope assert
 
-Test1::Test1() : 
-    m_shouldQuit(false), tick(0), wasPreparedToRender(false), 
-    font(NULL), guiTex(NULL), mouse({}), keyboard({}), simstate({}), 
+Test1::Test1(SDL_Renderer *rdr, unitv2 screen_size) : 
+    m_shouldQuit(false), tick(0),  
+    text_gui(rdr, screen_size.x, screen_size.y), mouse({}), keyboard({}), simstate({}), 
     disk(vec2(80,80),20), vel(0,0), accel(0,0)
 {
     testQ();
+    text_gui.text = "Foo !!\nBar !!";
+    text_gui.update();
     //exit(0);
-    hope(font = TTF_OpenFont("res/basis33/basis33.ttf", 16));
 }
-Test1::~Test1() {
-    SDL_DestroyTexture(guiTex);
-    TTF_CloseFont(font);
-}
+Test1::~Test1() {}
 bool Test1::shouldQuit() const { return m_shouldQuit; }
 void Test1::handleSDL2Event(const SDL_Event *e) {
     switch(e->type) {
@@ -105,61 +103,12 @@ void Test1::updateFixedStepSimulation() {
     mouse.wheel.y = 0;
 }
 
-static void rgba_px_from_bool8(
-                rgba32 *rgba, 
-                const uint8_t *pixels, 
-                size_t w, size_t h, size_t row_size, 
-                uint8_t r, uint8_t g, uint8_t b, uint8_t a)
-{
-    for(size_t y=0 ; y<h ; ++y) {
-        for(size_t x=0 ; x<w ; ++x) {
-             if(!pixels[y*row_size + x]) {
-                 memset(&rgba[y*w + x], 0, sizeof(rgba32));
-                 continue;
-             }
-            rgba[y*w + x].r = r;
-            rgba[y*w + x].g = g;
-            rgba[y*w + x].b = b;
-            rgba[y*w + x].a = a;
-        }
-    }
-}
-
-void Test1::renderSDL2_GUI(SDL_Renderer *rdr) const {
-    SDL_Color color = {0, 128, 0, 0};
-    ostringstream oss;
-    oss << "Tick: " << tick << " | "
-        << "Pos: " << disk.center << " | "
-        << "Vel: " << vel << " | "
-        << "Accel: " << accel;
-    SDL_Surface *s = TTF_RenderUTF8_Solid(
-        font, oss.str().c_str(), color
-    );
-    hope(s);
-    rgba32 *rgba = new rgba32[s->w*s->h];
-    rgba_px_from_bool8(rgba, (uint8_t*)s->pixels, s->w, s->h, s->pitch, 255, 200, 10, 255);
-    SDL_Rect rect = {0, 0, s->w, s->h};
-    // XXX Use SDL_LockTexture() ???
-    SDL_UpdateTexture(guiTex, &rect, rgba, s->w*sizeof(rgba32));
-    SDL_RenderCopy(rdr, guiTex, &rect, &rect);
-    SDL_FreeSurface(s);
-    delete[] rgba;
-}
-void Test1::prepareRenderSDL2(SDL_Renderer *rdr) {
-    wasPreparedToRender = true;
-    hope(guiTex = SDL_CreateTexture(rdr, 
-        SDL_PIXELFORMAT_ABGR8888, 
-        SDL_TEXTUREACCESS_STREAMING, 
-        800, 600
-    ));
-}
 
 void Test1::renderSDL2(SDL_Renderer *rdr) const {
-    assert(wasPreparedToRender);
     SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
     //renderworld.disk.pos = lerp(oldpos, newpos, (td-tf1)/float(tf2-tf1));
     disk.renderSDL2Wireframe(rdr);
-    renderSDL2_GUI(rdr);
+    text_gui.renderSDL2(rdr);
 }
 
 } // namespace Test1

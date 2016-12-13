@@ -5,6 +5,7 @@
 #include <stdcxx.hpp>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <TextGui.hpp>
 
 namespace Test1 {
 
@@ -14,14 +15,8 @@ typedef boulette::q<24,8> q;
 typedef boulette::aabb_2d<q> aabb_2d;
 typedef boulette::disk_2d<q> disk_2d;
 typedef boulette::vec2<q> vec2;
+typedef boulette::vec2<q> unitv2;
 typedef boulette::vec2<int32_t> i32v2;
-
-struct rgba32 {
-    uint32_t r:8;
-    uint32_t g:8;
-    uint32_t b:8;
-    uint32_t a:8;
-};
 
 #if 0
 typedef boulette::VelocitySys<q>         VelocitySys;
@@ -91,24 +86,21 @@ struct SimState {
     bool aabb_disk_intersects;
 };
 
+
 class Test1 {
 protected:
     bool m_shouldQuit;
     uint64_t tick;
-    bool wasPreparedToRender;
-    TTF_Font *font;
-    SDL_Texture *guiTex;
+    TextGui text_gui;
     Mouse mouse;
     Keyboard keyboard;
     SimState simstate;
     disk_2d disk;
     vec2 vel, accel;
-    void renderSDL2_GUI(SDL_Renderer *rdr) const;
 public:
-    Test1();
+    Test1(SDL_Renderer *rdr, unitv2 screen_size);
     ~Test1();
     bool shouldQuit() const;
-    void prepareRenderSDL2(SDL_Renderer *rdr);
     void updateFixedStepSimulation();
     void handleSDL2Event(const SDL_Event *e);
     void renderSDL2(SDL_Renderer *rdr) const;

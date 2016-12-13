@@ -15,50 +15,27 @@ const uintptr_t updateFixedStepSimulationBit(0x800);
 
 #define hope assert
 
-TestVerlet::TestVerlet(unitv2 screen_size) : 
-    m_shouldQuit(false), tick(0), wasPreparedToRender(false),
-    verletSys(screen_size, 1) {
-
-#define COLCOUNT 4
-    VerletSys::rgba32 cols[COLCOUNT] = {
-        VerletSys::rgba32(255, 000, 000, 255),
-        VerletSys::rgba32(255, 255, 000, 255),
-        VerletSys::rgba32(000, 255, 000, 255),
-        VerletSys::rgba32(000, 000, 255, 255)
-    };
-
-    VerletSys::VerletRigidBody box;
-    box.vertices.push_back(VerletSys::VerletVertex(unitv2(-30, -30), cols[0]));
-    box.vertices.push_back(VerletSys::VerletVertex(unitv2( 30, -30), cols[1]));
-    box.vertices.push_back(VerletSys::VerletVertex(unitv2( 30,  30), cols[2]));
-    box.vertices.push_back(VerletSys::VerletVertex(unitv2(-30,  30), cols[3]));
-    box.edges.push_back(VerletSys::evert_s(0, 1));
-    box.edges.push_back(VerletSys::evert_s(1, 2));
-    box.edges.push_back(VerletSys::evert_s(2, 3));
-    box.edges.push_back(VerletSys::evert_s(3, 0));
-    box.occluded_edges.push_back(VerletSys::evert_s(0, 2));
-    box.occluded_edges.push_back(VerletSys::evert_s(1, 3));
-#define BOXCOUNT 4
-    unitv2 centers[BOXCOUNT];
-    for(uint_fast32_t i=0 ; i<BOXCOUNT ; ++i)
-        centers[i] = unitv2(60 + i*150, 60);
-
-#define DISKSEGCOUNT 42
-    VerletSys::VerletRigidBody disk;
-    for(uint_fast32_t i=0 ; i<DISKSEGCOUNT ; ++i) {
-        float r = 60.f, theta = M_PI*2.f*i/(float)DISKSEGCOUNT;
-        unitv2 pos(r*cosf(theta), r*sinf(theta));
-        disk.vertices.push_back(VerletSys::VerletVertex(pos, cols[i%COLCOUNT]));
-        disk.edges.push_back(VerletSys::evert_s(i, (i+1)%DISKSEGCOUNT));
-        //disk.occluded_edges.push_back(VerletSys::evert_s(i, (i+(DISKSEGCOUNT/2))%DISKSEGCOUNT));
-        disk.edges.push_back(VerletSys::evert_s(i, (i+(DISKSEGCOUNT/2))%DISKSEGCOUNT));
-        //for(uint_fast32_t j=0 ; j<DISKSEGCOUNT ; ++j)
-            //if(j != i)
-                //disk.edges.push_back(VerletSys::evert_s(i, j));
+TestVerlet::TestVerlet(SDL_Renderer *rdr, unitv2 screen_size) : 
+    m_shouldQuit(false), tick(0),
+    text_gui(rdr, screen_size.x, screen_size.y),
+    verletSys(screen_size, 1) 
+{
+    vector<VerletSys::rgba32> cols;
+    cols.push_back(VerletSys::rgba32(255, 000, 000, 255));
+    cols.push_back(VerletSys::rgba32(255, 255, 000, 255));
+    cols.push_back(VerletSys::rgba32(000, 255, 000, 255));
+    cols.push_back(VerletSys::rgba32(000, 000, 255, 255));
+    unitv2 centers[4];
+    for(uint_fast32_t y=0 ; y<4 ; ++y) {
+        for(uint_fast32_t x=0 ; x<4 ; ++x)
+            centers[x] = unitv2(60+x*130+y*20, 60+y*70);
+        VerletSys::BodyDescriptor body;
+        if(y<2)
+            body = VerletSys::describeRigidDisk(30, 4+y, cols);
+        else
+            body = VerletSys::describeSlimyDisk(30+y*5, 22+y, cols);
+        verletSys.addRigidBodies(body, 4, centers);
     }
-
-    verletSys.addRigidBodies(disk, BOXCOUNT, centers);
-    verletSys.addRigidBodies( box, BOXCOUNT, centers);
 }
 
 TestVerlet::~TestVerlet() {}
@@ -91,23 +68,45 @@ void TestVerlet::handleSDL2Event(const SDL_Event *e) {
     case SDL_MOUSEWHEEL:       break;
     }
 }
+
 void TestVerlet::updateFixedStepSimulation() {
     ++tick;
     verletSys.update();
-}
-
-void TestVerlet::prepareRenderSDL2(SDL_Renderer *rdr) {
-    wasPreparedToRender = true;
+    stringstream ss;
+    int x, y;
+    SDL_GetMouseState(&x, &y);
+    ss 
+        << "Mouse : (" << x << ", " << y << ")" 
+        << " | Timestep : " << verletSys.timestep
+        << " | Gravity : "  << verletSys.gravity
+        << std::endl
+        << verletSys.bcount << " bodies"
+        << " | " << verletSys.vcount << " vertices"
+        << " | " << verletSys.ecount << " edges"
+        << " ("  << (verletSys.ecount-verletSys.e_occluded_start)
+        << " ("  << (uint32_t)(100.f*(verletSys.ecount-verletSys.e_occluded_start)/(float)verletSys.ecount) << "%)"
+        << " occluded)"
+        << std::endl
+        << "...";
+    /*
+    for(uint_fast32_t i=0 ; i<verletSys.bcount ; ++i) {
+        ss  << "V:" << verletSys.bvertcount[i] << " | "
+            << "E:" << verletSys.bedgecount[i] << " | "
+            << std::endl;
+    }
+    */
+    text_gui.text = ss.str();
+    text_gui.update();
 }
 
 void TestVerlet::renderSDL2(SDL_Renderer *rdr) const {
-    assert(wasPreparedToRender);
     SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
     uint32_t time_ms = SDL_GetTicks();
     uint32_t frame_dt = time_ms - last_update_time_ms;
     float interp = frame_dt/float(g_update_dt_ms);
     //cout << interp << endl;
     verletSys.renderSDL2(rdr, interp);
+    text_gui.renderSDL2(rdr);
 }
 
 } // namespace TestVerlet
