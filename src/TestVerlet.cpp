@@ -25,6 +25,7 @@ TestVerlet::TestVerlet(SDL_Renderer *rdr, unitv2 screen_size) :
     cols.push_back(VerletSys::rgba32(255, 255, 000, 255));
     cols.push_back(VerletSys::rgba32(000, 255, 000, 255));
     cols.push_back(VerletSys::rgba32(000, 000, 255, 255));
+#if 0
     unitv2 centers[4];
     for(uint_fast32_t y=0 ; y<4 ; ++y) {
         for(uint_fast32_t x=0 ; x<4 ; ++x)
@@ -36,6 +37,16 @@ TestVerlet::TestVerlet(SDL_Renderer *rdr, unitv2 screen_size) :
             body = VerletSys::describeSlimyDisk(30+y*5, 22+y, cols);
         verletSys.addRigidBodies(body, 4, centers);
     }
+#else
+    unit ground_h = 40;
+    unitv2 center(screen_size.x/unit(2), screen_size.y-ground_h);
+    center.y -= 120;
+    verletSys.addRigidBodies(VerletSys::describeBox(unitv2(50, 50), cols), 1, &center);
+    center.y -= 120;
+    verletSys.addRigidBodies(VerletSys::describeBox(unitv2(50, 50), cols), 1, &center);
+    center.y = screen_size.y-ground_h;
+    verletSys.addRigidBodies(VerletSys::describeBox(unitv2(screen_size.x/unit(2.2), ground_h/unit(2)), cols), 1, &center);
+#endif
 }
 
 TestVerlet::~TestVerlet() {}

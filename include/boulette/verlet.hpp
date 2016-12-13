@@ -41,8 +41,9 @@ namespace boulette {
 // TODO Why not valarray ? Or Vector ?
 //
 // TODO
+// - malloc_align16()
+// - Fix fake occluded edges optimization
 // - Growing vertices (vertices as spheres)
-// - Friction
 // - Sprites
 // - Coordinate shift from simulation-space to view-space
 
@@ -146,6 +147,21 @@ struct VerletPhysicsSystem {
         std::vector<evert_s> occluded_edges;
     };
 
+    static BodyDescriptor describeBox(vec2<T> half_size, const std::vector<rgba32> &colors) {
+        BodyDescriptor box;
+        uint_fast32_t i=0;
+        for(int y=-1 ; y<=1 ; y+=2) {
+            for(int x=-1 ; x<=1 ; x+=2) {
+                box.vertices.push_back(VertexDescriptor(half_size*vec2<T>(x, y), colors[i%colors.size()]));
+                box.edges.push_back(evert_s(i, (i+1)%4));
+                ++i;
+            }
+        }
+        box.occluded_edges.push_back(evert_s(0, 2));
+        box.occluded_edges.push_back(evert_s(1, 3));
+        return box;
+    }
+
     static BodyDescriptor describeRigidDisk(float radius, size_t vertex_count, const std::vector<rgba32> &colors) {
         BodyDescriptor disk;
         for(uint_fast32_t i=0 ; i<vertex_count ; ++i) {
@@ -173,6 +189,19 @@ struct VerletPhysicsSystem {
             disk.occluded_edges.push_back(evert_s(i, (i+(vertex_count/2))%vertex_count));
         }
         return disk;
+    }
+    static BodyDescriptor describeBob() {
+        rgba32 color(000, 255, 000, 255);
+        BodyDescriptor bob;
+        // Head
+        bob.vertices.push_back(VertexDescriptor(vec2<T>(-10,  10), color));
+        bob.vertices.push_back(VertexDescriptor(vec2<T>( 10,  10), color));
+        bob.vertices.push_back(VertexDescriptor(vec2<T>( 10, -10), color));
+        bob.vertices.push_back(VertexDescriptor(vec2<T>(-10, -10), color));
+        // Spine
+        bob.vertices.push_back(VertexDescriptor(vec2<T>(0,  10), color));
+        bob.vertices.push_back(VertexDescriptor(vec2<T>(0,  30), color));
+        bob.vertices.push_back(VertexDescriptor(vec2<T>(0,  40), color));
     }
 
     void addRigidBodies(const BodyDescriptor &b, size_t cnt, vec2<T> *centers) {
@@ -377,6 +406,15 @@ struct VerletPhysicsSystem {
         vpos[v1] -= collision_vector*(T(1)-t)/(T(2)*lambda);
         vpos[v2] -= collision_vector*      t /(T(2)*lambda);
         vpos[v]  += collision_vector/T(2);
+
+        vec2<T> mv = vpos[v] - vprevpos[v];
+        vec2<T> v1v2 = vpos[v1] - vpos[v2];
+        T dotp = dot(normalize(mv), normalize(v1v2));
+        if(abs(dotp) > T(.9)) {
+            //vec2<T> mv_proj = v1v2*dot(mv, v1v2)/norm(v1v2);
+            T friction(.8); // XXX allow per-body friction.
+            vpos[v] -= mv*friction;
+        }
     }
 
     void processBodyCollisions() {
