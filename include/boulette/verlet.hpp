@@ -41,11 +41,13 @@ namespace boulette {
 // TODO Why not valarray ? Or Vector ?
 //
 // TODO
+// - Fix objects not behaving well
 // - malloc_align16()
 // - Fix fake occluded edges optimization
 // - Growing vertices (vertices as spheres)
 // - Sprites
 // - Coordinate shift from simulation-space to view-space
+// - Port to Emscripten ??
 
 
 // XXX Actually implement these !
