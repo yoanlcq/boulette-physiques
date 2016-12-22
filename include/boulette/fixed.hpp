@@ -1,3 +1,37 @@
+// The code for most of the operations was taken from the Fixedpt-C single-header library.
+// https://sourceforge.net/projects/fixedptc/
+// Functions such as cos(), sin() and exp() are based on variants of Taylor approximations.
+//
+// Fixed-point types are named "q" as in "Q-numbers" (which mean the same thing).
+//
+// Because this file used code from fixedptc.h, the copyright disclaimer follows.
+
+/*-
+ * Copyright (c) 2010-2012 Ivan Voras <ivoras@freebsd.org>
+ * Copyright (c) 2012 Tim Hartrick <tim@edgecast.com>
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
 #ifndef BOULETTE_FIXED_HPP
 #define BOULETTE_FIXED_HPP
 
@@ -10,12 +44,13 @@ typedef uint32_t quint;
 typedef  int64_t qlsint;
 typedef uint64_t qluint;
 
-#define LOCAL_E  2.71828182845904523536
-#define LOCAL_PI 3.14159265358979323846
-
 template <size_t d, size_t f> 
 struct q {
-    qsint raw; // This member is kept public. Edit only if you know what you're doing.
+
+    static_assert(d>1, "Needs decimal_bits > 1, because we need more than the sign bit of signed integers.");
+    static_assert(d+f<=32, "Too big width.");
+
+    qsint raw;
     ~q() {}
     q()           : raw(0) {}
     q(float    x) : raw(x*q(1).raw + (x>=0.f ? 0.5f : -0.5f)) {}
@@ -34,6 +69,15 @@ struct q {
     static const q e;
     static const quint fmask;
 
+    // From fixedptc.h :
+    //
+    // Convert the given fixedpt number to a decimal string.
+    // The max_dec argument specifies how many decimal digits to the right
+    // of the decimal point to generate. If set to -1, the "default" number
+    // of decimal digits will be used (2 for 32-bit fixedpt width, 10 for
+    // 64-bit fixedpt width); If set to -2, "all" of the digits will
+    // be returned, meaning there will be invalid, bogus digits outside the
+    // specified precisions.
     std::string toString(int max_dec=-2) const {
         char str[32];
         int ndec = 0, slen = 0;
@@ -41,9 +85,6 @@ struct q {
         qluint fr, ip;
         auto rawcpy = raw;
 
-        static_assert(d>1, "Needs decimal_bits > 1, Because we need more than the sign bit of signed integers.");
-        static_assert(d>0, "Needs decimal_bits > 0, otherwise we'll print garbage.");
-        static_assert(d+f<=64, "Too big width.");
         if (max_dec == -1)
             max_dec = (d+f<=32 ? 2 : 10);
         else if (max_dec == -2)
@@ -100,7 +141,20 @@ struct q {
     friend q    operator+ (const q &lhs, const q &rhs) {q r; r.raw = lhs.raw+rhs.raw; return r;}
     friend q    operator- (const q &lhs, const q &rhs) {q r; r.raw = lhs.raw-rhs.raw; return r;}
     friend q    operator* (const q &lhs, const q &rhs) {q r; r.raw = (lhs.lraw()*rhs.lraw()) >> f; return r;}
+#define Q_CHECK_DIV_BY_ZERO // Remove this in production
+#ifdef Q_CHECK_DIV_BY_ZERO
+    friend q    operator/ (const q &lhs, const q &rhs) { 
+        if(!rhs.lraw()) {
+            std::cerr << "Warning : Dividing by 0 is not allowed." << std::endl;
+            return lhs;
+        } 
+        q r; 
+        r.raw = (lhs.lraw() << f)/rhs.lraw(); 
+        return r;
+    }
+#else
     friend q    operator/ (const q &lhs, const q &rhs) {q r; r.raw = (lhs.lraw() << f)/rhs.lraw(); return r;}
+#endif
     friend bool operator==(const q &lhs, const q &rhs) {return lhs.raw==rhs.raw;    }
     friend bool operator!=(const q &lhs, const q &rhs) {return !operator==(lhs,rhs);}
     friend bool operator< (const q &lhs, const q &rhs) {return lhs.raw<rhs.raw;     }
@@ -141,11 +195,11 @@ struct q {
     friend q  cos(const q &x) {
         return sin(pi/q(2) - x);
     }
-    friend q  tan(q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
-    friend q  acos(q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
-    friend q  asin(q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
-    friend q  atan(q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
-    friend q  atan2(q y, q x) {/*assert(false && "This was not implemented yet!");*/ return q(0);}
+    friend q  tan(q x)        { std::cerr << "Warning : " << __func__ << " is not implemented yet!" << std::endl; return q(0);}
+    friend q  acos(q x)       { std::cerr << "Warning : " << __func__ << " is not implemented yet!" << std::endl; return q(0);}
+    friend q  asin(q x)       { std::cerr << "Warning : " << __func__ << " is not implemented yet!" << std::endl; return q(0);}
+    friend q  atan(q x)       { std::cerr << "Warning : " << __func__ << " is not implemented yet!" << std::endl; return q(0);}
+    friend q  atan2(q y, q x) { std::cerr << "Warning : " << __func__ << " is not implemented yet!" << std::endl; return q(0);}
     friend q  ln (const q &x) {
         q log2, xi, ff, s, z, w, R;
         const q LN2(0.69314718055994530942);
@@ -240,14 +294,29 @@ struct q {
     }
 };
 
-template<size_t d, size_t f> const q<d,f> q<d,f>::pi(LOCAL_PI);
-template<size_t d, size_t f> const q<d,f> q<d,f>::e(LOCAL_E);
+template<size_t d, size_t f> const q<d,f> q<d,f>::pi(3.14159265358979323846);
+template<size_t d, size_t f> const q<d,f> q<d,f>::e(2.71828182845904523536);
 template<size_t d, size_t f> const quint  q<d,f>::fmask((1<<f)-1);
 
-#undef LOCAL_E 
-#undef LOCAL_PI
-
 } // namespace boulette
+
+
+namespace std {
+
+template <size_t d, size_t f>
+class numeric_limits<boulette::q<d,f>> {
+public:
+    static boulette::q<d,f> max() {
+        return boulette::q<d,f>::fromRaw(std::numeric_limits<boulette::qsint>::max());
+    }
+    static boulette::q<d,f> min() {
+        // The +1 at the end prevents q's toString() method to print garbage (for some reason)...
+        // Should concern myself with this, but haven't got time.
+        return boulette::q<d,f>::fromRaw(std::numeric_limits<boulette::qsint>::min()+1);
+    }
+};
+
+} // namespace std
 
 
 #endif//BOULETTE_FIXED_HPP

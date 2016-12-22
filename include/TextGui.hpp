@@ -19,6 +19,7 @@ public:
         SDL_Color bg_color = { 40,  40,  40, 255}
     );
     ~TextGui();
+    void reshape(SDL_Renderer *rdr, size_t w, size_t h);
     void renderSDL2(SDL_Renderer *rdr) const;
     SDL_Color fg_color, bg_color;
     std::string text;

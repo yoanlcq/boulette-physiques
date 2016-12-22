@@ -9,24 +9,20 @@ struct rgba32 {
     uint32_t a:8;
 };
 
-#define hope assert
-
 TextGui::TextGui(SDL_Renderer *rdr, size_t screen_w, size_t screen_h, string fontpath, size_t fontsize, SDL_Color fg_color, SDL_Color bg_color) 
     :
     font(TTF_OpenFont(fontpath.c_str(), fontsize)),
-    tex(SDL_CreateTexture(rdr,
-        SDL_PIXELFORMAT_ABGR8888, 
-        SDL_TEXTUREACCESS_STREAMING, 
-        screen_w, screen_h
-    )),
+    tex(nullptr),
     fontsize(fontsize),
     fg_color(fg_color), 
     bg_color(bg_color), 
     text("")
 {
-    hope(font);
-    hope(tex);
-    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    reshape(rdr, screen_w, screen_h);
+    if(!font) {
+        cerr << "Could not open `" << fontpath << "'!" << endl;
+        abort();
+    }
 }
 TextGui::~TextGui() {
     SDL_DestroyTexture(tex);
@@ -61,6 +57,23 @@ void TextGui::renderSDL2(SDL_Renderer *rdr) const {
     SDL_RenderCopy(rdr, tex, NULL, NULL);
 }
 
+void TextGui::reshape(SDL_Renderer *rdr, size_t w, size_t h) {
+    // Inelegant 'if()', sorry.
+    if(tex)
+        SDL_DestroyTexture(tex);
+    tex = SDL_CreateTexture(rdr,
+        SDL_PIXELFORMAT_ABGR8888, 
+        SDL_TEXTUREACCESS_STREAMING, 
+        w, h
+    );
+    if(!tex) {
+        cerr << "Failed to create a " << w << "x" << h 
+             << " texture for TextGui!" << endl;
+        abort();
+    }
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+}
+
 void TextGui::update() {
     uint32_t format;
     int access, w, h;
@@ -71,14 +84,19 @@ void TextGui::update() {
     ss.str(text);
     string line;
 
-    size_t y = 0;
-    while(getline(ss, line)) {
+    for(uint_fast32_t y=0 ; getline(ss, line) ; y += fontsize) {
+        if(!line.length())
+            continue;
         SDL_Surface *s = TTF_RenderUTF8_Solid(font, line.c_str(), fg_color);
+        if(!s) {
+            cerr << "Failed to allocate a SDL_Surface for rendering" 
+                 << "\"" << line << "\"!" << endl;
+            abort();
+        }
         rgba_px_from_bool8(rgba, (bool8*)s->pixels, 1, 1+y, w, h,
                            s->w, s->h, s->pitch, bg_color);
         rgba_px_from_bool8(rgba, (bool8*)s->pixels, 0, 0+y, w, h,
                            s->w, s->h, s->pitch, fg_color); 
-        y += fontsize;
         SDL_FreeSurface(s);
     }
     // XXX Use SDL_LockTexture() ???

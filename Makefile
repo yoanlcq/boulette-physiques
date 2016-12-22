@@ -21,7 +21,7 @@ cxxflags := $(strip \
 	-Iinclude -Iinclude/contrib \
 	-msse -msse2 -masm=intel \
 )
-ldlibs := -lSDL2 -lSDL2_ttf -lfreetype
+ldlibs := -lSDL2 -lSDL2_ttf #-lfreetype
 cxxfiles := $(call rglob,src,*.cpp)
 ofiles := $(patsubst src/%.cpp,build/%.o,$(cxxfiles))
 exe := bin/test_verlet

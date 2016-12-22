@@ -1,6 +1,5 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-#include <Test1.hpp>
 #include <TestVerlet.hpp>
 
 static uint32_t timer_callback(uint32_t interval, void *param) {
@@ -14,8 +13,6 @@ static uint32_t timer_callback(uint32_t interval, void *param) {
     return interval;
 }
 
-uint32_t g_update_dt_ms = 0;
-
 int main(int argc, char *argv[]) {
 
     if(SDL_Init(SDL_INIT_EVERYTHING) < 0) {
@@ -28,20 +25,20 @@ int main(int argc, char *argv[]) {
     }
     size_t win_w=600, win_h=400;
     SDL_Window *win = SDL_CreateWindow(
-        "test1", 
+        "Boulette :: Verlet Integration", 
         SDL_WINDOWPOS_CENTERED, 
         SDL_WINDOWPOS_CENTERED, 
-        win_w, win_h, 0
+        win_w, win_h, SDL_WINDOW_RESIZABLE
     );
     SDL_Renderer *rdr = SDL_CreateRenderer(win, -1, 
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+        SDL_RENDERER_PRESENTVSYNC
     );
     SDL_SetRenderDrawBlendMode(rdr, SDL_BLENDMODE_BLEND);
 
+    uint32_t update_dt_ms = 50;
 #define TEST TestVerlet
-    TEST::TEST test1(rdr, TEST::unitv2(win_w, win_h));
-    g_update_dt_ms = 50;
-    SDL_AddTimer(g_update_dt_ms, timer_callback, (void*)TEST::updateFixedStepSimulationBit);
+    TEST::TEST test1(rdr, TEST::unitv2(win_w, win_h), update_dt_ms);
+    SDL_AddTimer(update_dt_ms, timer_callback, (void*)TEST::updateFixedStepSimulationBit);
 
     do {
         SDL_Event e;
