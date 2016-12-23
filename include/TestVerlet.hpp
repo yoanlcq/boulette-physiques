@@ -41,7 +41,7 @@ struct Input {
     int mousescroll;
     struct { 
         bool mouseleft, mouseright, mousemiddle;
-        bool right, up, left, down, plus, minus, n, s, d, h, r, f;
+        bool right, up, left, down, plus, minus, n, s, d, h, r, f, a;
     } held, clicked;
 
     // Pretty much chose this layout so this method scales well
@@ -63,6 +63,7 @@ struct CreationTool {
 class TestVerlet {
     bool should_quit;
     bool does_display_extras;
+    bool does_display_aabbs;
     bool is_grabbing_a_vertex;
     size_t grabbed_vertex_index;
     uint32_t update_dt_ms;

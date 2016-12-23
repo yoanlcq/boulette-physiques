@@ -37,7 +37,7 @@ namespace boulette {
 //   The addRigidBodies() method allows to efficiently add any number of rigid bodies
 //   in the system at once, taking advantage of data locality.
 // - Each vertex used to store a back pointer to the body they're in, which is needlessly
-//   expensive memory-wise.
+//   expensive memory-wise. It's like making a Pixel class that stores a back pointer to the Image it's in.
 //
 // About the arrays : I acknowledge they don't quite fit the C++ mindset, but they're the basic tools in DOD.
 // I could have looked into std::valarray, std::vector, and extending std::allocator.
@@ -47,11 +47,6 @@ namespace boulette {
 // For instance, as the below VerletPhysicsSystem shows, it wouldn't make sense for the 'vpos' and 'vprevpos'
 // members to each maintain their own 'element count' member : only one is needed and its is the element count
 // for both arrays.
-//
-// TODO
-// - Fix vertex picking deforming edges
-// - Fix fake occluded edges optimization
-// - Fix objects not behaving well
 
 
 // I initially planned to have these actually return 16-byte-aligned memory,
@@ -520,12 +515,15 @@ struct VerletPhysicsSystem {
                 }
             }
         }
-
+    }
+    void renderSDL2WithAabbs(SDL_Renderer *rdr, RT interp=1) const {
+        renderSDL2(rdr, interp);
         SDL_SetRenderDrawColor(rdr, 0, 255, 0, 255);
         //Render each AABB... No pretty interpolaton here, we don't care that much.
         for(index i=0 ; i<bcount ; ++i)
             baabb[i].renderSDL2Wireframe(rdr);
     }
+
 };
 
 

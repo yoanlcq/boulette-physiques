@@ -78,6 +78,7 @@ void Input::handleSDL2Event(const SDL_Event *e) {
         case SDLK_h:        held.h     = is_down; if(is_down) clicked.h     = true; break; \
         case SDLK_r:        held.r     = is_down; if(is_down) clicked.r     = true; break; \
         case SDLK_f:        held.f     = is_down; if(is_down) clicked.f     = true; break; \
+        case SDLK_a:        held.a     = is_down; if(is_down) clicked.a     = true; break; \
         }
 #define HANDLE_MBT_EVT(is_down) \
         switch(e->button.button) { \
@@ -102,7 +103,7 @@ void Input::handleSDL2Event(const SDL_Event *e) {
 
 
 TestVerlet::TestVerlet(SDL_Renderer *rdr, unitv2 screen_size, uint32_t update_dt_ms) :  
-    should_quit(false), does_display_extras(false),
+    should_quit(false), does_display_extras(false), does_display_aabbs(false),
     is_grabbing_a_vertex(false), grabbed_vertex_index(0),
     update_dt_ms(update_dt_ms), tick(0),
     input({}), creation_tool(),
@@ -189,6 +190,9 @@ void TestVerlet::updateFixedStepSimulation() {
 
     if(input.clicked.h)
         does_display_extras = !does_display_extras;
+    if(input.clicked.a)
+        does_display_aabbs = !does_display_aabbs;
+
 
     if(input.clicked.f)
         verletSys.enable_experimental_friction = !verletSys.enable_experimental_friction;
@@ -255,6 +259,7 @@ void TestVerlet::updateFixedStepSimulation() {
         << "S : Instanciate Slimy Disk (funny!)" << endl
         << "D : Instanciate Rigid Disk (expensive!)" << endl
         << "F : Toggle experimental friction" << endl
+        << "A : Toggle AABB display" << endl
         << "R : Remove all bodies mercilessly" << endl
     ;
     }
@@ -270,7 +275,10 @@ void TestVerlet::renderSDL2(SDL_Renderer *rdr) const {
     uint32_t frame_dt = time_ms - last_update_time_ms;
     float interp = frame_dt/float(update_dt_ms);
     //cout << interp << endl;
-    verletSys.renderSDL2(rdr, interp);
+    if(does_display_aabbs)
+        verletSys.renderSDL2WithAabbs(rdr, interp);
+    else
+        verletSys.renderSDL2(rdr, interp);
     text_gui.renderSDL2(rdr);
 }
 

@@ -1,2 +1,0 @@
-g++ -Wall -Wreturn-type -pedantic -std=c++11 -g -O3 -Iinclude -Iinclude/contrib -msse -msse2 -masm=intel -c src/TestVerlet.cpp -o build/TestVerlet.o
-Makefile:37 : la recette pour la cible « build/TestVerlet.o » a échouée
