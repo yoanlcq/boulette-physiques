@@ -3,25 +3,16 @@ rglob=$(wildcard \
 	$(1)/*/$(2) \
 	$(1)/*/*/$(2) \
 	$(1)/*/*/*/$(2) \
-	$(1)/*/*/*/*/$(2) \
-	$(1)/*/*/*/*/*/$(2) \
-	$(1)/*/*/*/*/*/*/$(2) \
-	$(1)/*/*/*/*/*/*/*/$(2) \
-	$(1)/*/*/*/*/*/*/*/*/$(2) \
-	$(1)/*/*/*/*/*/*/*/*/*/$(2) \
-	$(1)/*/*/*/*/*/*/*/*/*/*/$(2) \
-	$(1)/*/*/*/*/*/*/*/*/*/*/*/$(2) \
-	$(1)/*/*/*/*/*/*/*/*/*/*/*/*/$(2) \
 )
 
 cxx := g++
 cxxflags := $(strip \
 	-Wall -Wreturn-type -pedantic \
 	-std=c++11 -g -O3 \
-	-Iinclude -Iinclude/contrib \
-	-msse -msse2 -masm=intel \
+	-Iinclude \
+	-msse -msse2 \
 )
-ldlibs := -lSDL2 -lSDL2_ttf #-lfreetype
+ldlibs := -lSDL2 -lSDL2_ttf
 cxxfiles := $(call rglob,src,*.cpp)
 ofiles := $(patsubst src/%.cpp,build/%.o,$(cxxfiles))
 exe := bin/test_verlet

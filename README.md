@@ -3,15 +3,16 @@
 Basic physics using fixed-point or integers.
 For determinism, stability and consistency across all setups (useful for networked 
 simulations using the lockstep model).  
+Prerequisites for the test program are `SDL2` and `SDL2_ttf`.  
 
-## Evolution and current state -- Please read before reviewing --
+## Evolution and known problems -- Please read before reviewing --
 
 I was initially planning to implement this physics engine the way I'm used to : have collision primitives, and write functions to detect collisions between 
 them.  
 The following (legacy) files show my initial efforts :
-- `aabb.hpp`
-- `box.hpp`
-- `disk.hpp`
+- `include/boulette/aabb.hpp`
+- `include/boulette/box.hpp`
+- `include/boulette/disk.hpp`
   
 But soon I needed to implement velocity and acceleration, so I figured I'd do
 it the old way :
@@ -36,6 +37,19 @@ There's no render-time simulation-space to screen-space transformation, but it w
 for `TestVerlet` to implement (and perhaps it would allow integer-based simulations, since the simulation
 wouldn't be limited by the window's size).  
    
+### Known problems
+
+- Picking vertices with the mouse deforms the edges - this is because the update step's frequency 
+  is known to be slower than the display rate.  I tried a lot a things to fix this, but 
+  none are satisfying (it either caused jitter or made the code more obscure).
+- Sometimes, enabling friction seems to "extend" bodies as if they grew invisibly. I haven't been able
+  to prove why.
+- The test program can get slow pretty easily - I blame it on SDL2's renderer which doesn't
+  allow me to cleanly render all of my objects at the same time. I would probably be wise
+  to do this in proper OpenGL.
+
+### On Data-Oriented Design
+
 I also took it as an opportunity to put what I've learned about
 Data-Oriented Design (DOD) into practice. However, since it looks like OOP's 
 nemesis (while still valuing understandable code), the Verlet System's code is a 

@@ -2,7 +2,7 @@
 #define BOULETTE_VERLET_HPP
 
 #include <boulette.hpp>
-#include <x86intrin.h>
+// #include <x86intrin.h>
 
 namespace boulette {
 
@@ -65,14 +65,14 @@ template <typename T, typename RT>
 struct VerletPhysicsSystem {
 
     typedef aabb_2d<T> aabb;
-    typedef uint_fast32_t index;
+    typedef uint32_t index;
     struct rgba32 {
         uint32_t r:8, g:8, b:8, a:8; 
         rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a) {}
     };
     struct evert_s {
         index v1, v2;
-        evert_s(index v1, index v2) : v1(v1), v2(v2) {}
+        evert_s(index v1=0, index v2=0) : v1(v1), v2(v2) {}
     };
 
     vec2<T>  screen_size; // Keep vertices inside for debugging
@@ -86,23 +86,26 @@ struct VerletPhysicsSystem {
     index    ecount;      // Total number of edges.
     evert_s *evert;       // For each edge, two indices to vertices.
     T       *elength;     // For each edge, its length.
-    // Each array that contains data for the edges is split into
-    // 2 sections : edges that are occluded, and the others.
-    // Here, an edge is said to be occluded if we know that it is totally
-    // inside a body, therefore we can avoid testing it for collisions.
-    // Thus, to iterate over all lengths of edges that are occluded, one would
-    // do it like this :
-    //     for(index i=e_occluded_start ; i<ecount ; ++i)
-    // And over all those that aren't :
-    //     for(index i=0 ; i<e_occluded_start ; ++i)
-    index    e_occluded_start;
-    index    bcount;      // Total number of Bodies.
-    vec2<T> *bcenter;     // For each body, its center of mass.
-    index   *bvertcount;  // For each body, its vertex count.
-    index  **bvert;       // For each body, its vertex indices.
-    index   *bedgecount;  // For each body, its edge count.
-    index  **bedge;       // For each body, its edge indices.
-    aabb    *baabb;       // For each body, its Axis-Aligned Bounding Box.
+
+    // Basically, the only time we're interested in a body's
+    // edges is when we check for collisions. And it turns out
+    // we only need the edges which aren't inside the body.
+    // So for each body, edges are placed in the evert and elength
+    // arrays like so :
+    //     |--------------------------|------------------------|
+    //     ^   data for outer edges   ^  data for inner edges  ^
+    //   first                    last_outer                 last
+    struct bedgeinfo_s {
+        index first, last_outer, last; 
+    };
+    struct bvertinfo_s {
+        index first, last;
+    };
+    index        bcount;    // Total number of bodies.
+    bvertinfo_s *bvertinfo; // For each body, its first vertex and vertex count.
+    bedgeinfo_s *bedgeinfo; // For each body, its first edge and outer edge count.
+    vec2<T>     *bcenter;   // For each body, its center of mass.
+    aabb        *baabb;     // For each body, its Axis-Aligned Bounding Box (for optimization).
 
     // This flag is pretty self-explanatory and a bit hackish.
     // Basically any good physics engine would allow for creating
@@ -133,13 +136,10 @@ struct VerletPhysicsSystem {
         ecount    (0),
         evert     (nullptr),
         elength   (nullptr),
-        e_occluded_start(0),
         bcount    (0),
+        bvertinfo (nullptr),
+        bedgeinfo (nullptr),
         bcenter   (nullptr),
-        bvertcount(nullptr),
-        bvert     (nullptr),
-        bedgecount(nullptr),
-        bedge     (nullptr),
         baabb     (nullptr),
         enable_experimental_friction(false),
         friction_coefficient(.8)
@@ -152,29 +152,26 @@ struct VerletPhysicsSystem {
         free_align16(vcolor);
         free_align16(evert);
         free_align16(elength);
-
-        for(index i=0 ; i<bcount ; ++i) {
-            free_align16(bvert[i]);
-            free_align16(bedge[i]);
-        }
-
-        free_align16(bvert     );
-        free_align16(bedge     );
-        free_align16(bcenter   );
-        free_align16(bvertcount);
-        free_align16(bedgecount);
+        free_align16(bvertinfo);
+        free_align16(bedgeinfo);
+        free_align16(bcenter);
         free_align16(baabb);
     }
 
     void reset() {
         // Just reconstruct ourselves, and destroy our past self in the process.
-        // Part of me feels bad for this.
         *this = VerletPhysicsSystem(screen_size);
     }
 
     void reshape(vec2<T> p_screen_size) {
         screen_size = p_screen_size;
     }
+
+
+    // This part right here is used to ease the insertion of
+    // new bodies into the system, thanks to "descriptors".
+    // The describeXXX() methods are supposed to be implemented
+    // by the user, but the basic ones are put here for convenience.
 
     struct VertexDescriptor {
         vec2<T> position;
@@ -184,7 +181,7 @@ struct VerletPhysicsSystem {
     struct BodyDescriptor {
         std::vector<VertexDescriptor> vertices;
         std::vector<evert_s> edges;
-        std::vector<evert_s> occluded_edges;
+        std::vector<evert_s> inner_edges;
     };
 
     static BodyDescriptor describeNecklace(float radius, size_t vertex_count, const std::vector<rgba32> &colors) {
@@ -204,15 +201,16 @@ struct VerletPhysicsSystem {
         BodyDescriptor disk = describeNecklace(radius, vertex_count, colors);
         for(uint_fast32_t i=0 ; i<vertex_count-2 ; ++i)
             for(uint_fast32_t j=0 ; j<(i ? vertex_count-2-i : vertex_count-3); ++j)
-                disk.occluded_edges.push_back(evert_s(i, i+2+j));
+                disk.inner_edges.push_back(evert_s(i, i+2+j));
         return disk;
     }
     static BodyDescriptor describeSlimyDisk(float radius, size_t vertex_count, const std::vector<rgba32> &colors) {
         BodyDescriptor disk = describeNecklace(radius, vertex_count, colors);
         for(uint_fast32_t i=0 ; i<vertex_count ; ++i)
-            disk.occluded_edges.push_back(evert_s(i, (i+(vertex_count/2))%vertex_count));
+            disk.inner_edges.push_back(evert_s(i, (i+(vertex_count/2))%vertex_count));
         return disk;
     }
+
 
 
     // This method was easily the hardest to implement, and it is definitely not easy to grasp at first glance.
@@ -222,18 +220,16 @@ struct VerletPhysicsSystem {
     // I feel sorry for any reader of this method - seems like it's one place where DOD falls short.
     void addRigidBodies(const BodyDescriptor &b, size_t cnt, vec2<T> *centers) {
 
-        vpos       = (vec2<T>*) realloc_align16(vpos      , (vcount+cnt*b.vertices.size())*sizeof(*vpos      ));
-        vprevpos   = (vec2<T>*) realloc_align16(vprevpos  , (vcount+cnt*b.vertices.size())*sizeof(*vprevpos  ));
-        vaccel     = (vec2<T>*) realloc_align16(vaccel    , (vcount+cnt*b.vertices.size())*sizeof(*vaccel    ));
-        vcolor     = (rgba32*)  realloc_align16(vcolor    , (vcount+cnt*b.vertices.size())*sizeof(*vcolor    ));
-        evert      = (evert_s*) realloc_align16(evert     , (ecount+cnt*(b.edges.size()+b.occluded_edges.size()))*sizeof(*evert     ));
-        elength    = (T*)       realloc_align16(elength   , (ecount+cnt*(b.edges.size()+b.occluded_edges.size()))*sizeof(*elength   ));
-        bcenter    = (vec2<T>*) realloc_align16(bcenter   , (bcount+cnt)  *sizeof(*bcenter   ));
-        bvertcount = (index*)   realloc_align16(bvertcount, (bcount+cnt)  *sizeof(*bvertcount));
-        bedgecount = (index*)   realloc_align16(bedgecount, (bcount+cnt)  *sizeof(*bedgecount));
-        bvert      = (index**)  realloc_align16(bvert     , (bcount+cnt)  *sizeof(*bvert     ));
-        bedge      = (index**)  realloc_align16(bedge     , (bcount+cnt)  *sizeof(*bedge     ));
-        baabb      = (aabb*)    realloc_align16(baabb     , (bcount+cnt)  *sizeof(*baabb     ));
+        vpos       = (vec2<T>*)     realloc_align16(vpos      , (vcount+cnt*b.vertices.size())*sizeof(*vpos      ));
+        vprevpos   = (vec2<T>*)     realloc_align16(vprevpos  , (vcount+cnt*b.vertices.size())*sizeof(*vprevpos  ));
+        vaccel     = (vec2<T>*)     realloc_align16(vaccel    , (vcount+cnt*b.vertices.size())*sizeof(*vaccel    ));
+        vcolor     = (rgba32*)      realloc_align16(vcolor    , (vcount+cnt*b.vertices.size())*sizeof(*vcolor    ));
+        evert      = (evert_s*)     realloc_align16(evert     , (ecount+cnt*(b.edges.size()+b.inner_edges.size()))*sizeof(*evert     ));
+        elength    = (T*)           realloc_align16(elength   , (ecount+cnt*(b.edges.size()+b.inner_edges.size()))*sizeof(*elength   ));
+        bvertinfo  = (bvertinfo_s*) realloc_align16(bvertinfo , (bcount+cnt)  *sizeof(*bvertinfo ));
+        bedgeinfo  = (bedgeinfo_s*) realloc_align16(bedgeinfo , (bcount+cnt)  *sizeof(*bedgeinfo ));
+        bcenter    = (vec2<T>*)     realloc_align16(bcenter   , (bcount+cnt)  *sizeof(*bcenter   ));
+        baabb      = (aabb*)        realloc_align16(baabb     , (bcount+cnt)  *sizeof(*baabb     ));
 
         for(index i=0 ; i<cnt ; ++i)
             for(index v=0 ; v<b.vertices.size() ; ++v) {
@@ -243,38 +239,30 @@ struct VerletPhysicsSystem {
         memcpy(vprevpos+vcount, vpos+vcount, cnt*b.vertices.size()*sizeof(*vpos));
         memset(vaccel+vcount, 0, cnt*b.vertices.size()*sizeof(*vaccel));
 
-        index new_occluded_start = e_occluded_start + cnt*b.edges.size();
-        memmove(evert + new_occluded_start, evert + e_occluded_start, (ecount-e_occluded_start)*sizeof(*evert));
-        memmove(elength + new_occluded_start, elength + e_occluded_start, (ecount-e_occluded_start)*sizeof(*elength));
         for(index i=0 ; i<cnt ; ++i) {
+            size_t total_body_edge_count = b.edges.size() + b.inner_edges.size();
             for(index e=0 ; e<b.edges.size() ; ++e) {
                 index v1 = vcount + i*b.vertices.size() + b.edges[e].v1;
                 index v2 = vcount + i*b.vertices.size() + b.edges[e].v2;
-                evert  [e_occluded_start + b.edges.size()*i + e] = evert_s(v1, v2);
-                elength[e_occluded_start + b.edges.size()*i + e] = norm(vpos[v2] - vpos[v1]);
+                evert  [ecount + total_body_edge_count*i + e] = evert_s(v1, v2);
+                elength[ecount + total_body_edge_count*i + e] = norm(vpos[v2] - vpos[v1]);
             }
-            for(index e=0 ; e<b.occluded_edges.size() ; ++e) {
-                index v1 = vcount + i*b.vertices.size() + b.occluded_edges[e].v1;
-                index v2 = vcount + i*b.vertices.size() + b.occluded_edges[e].v2;
-                evert  [new_occluded_start + (ecount-e_occluded_start) + b.occluded_edges.size()*i + e] = evert_s(v1, v2);
-                elength[new_occluded_start + (ecount-e_occluded_start) + b.occluded_edges.size()*i + e] = norm(vpos[v2] - vpos[v1]);
+            for(index e=0 ; e<b.inner_edges.size() ; ++e) {
+                index v1 = vcount + i*b.vertices.size() + b.inner_edges[e].v1;
+                index v2 = vcount + i*b.vertices.size() + b.inner_edges[e].v2;
+                evert  [ecount + total_body_edge_count*i + e + b.edges.size()] = evert_s(v1, v2);
+                elength[ecount + total_body_edge_count*i + e + b.edges.size()] = norm(vpos[v2] - vpos[v1]);
             }
         }
 
         for(index i=0 ; i<cnt ; ++i) {
-            bvertcount[bcount+i] = b.vertices.size();
-            bedgecount[bcount+i] = b.edges.size()+b.occluded_edges.size();
-            bvert[bcount+i]      = (index*) malloc_align16(bvertcount[bcount+i]*sizeof(index));
-            bedge[bcount+i]      = (index*) malloc_align16(bedgecount[bcount+i]*sizeof(index));
+            size_t total_body_edge_count = b.edges.size() + b.inner_edges.size();
+            bvertinfo[bcount+i].first = vcount + i*b.vertices.size();
+            bvertinfo[bcount+i].last  = bvertinfo[bcount+i].first + b.vertices.size();
+            bedgeinfo[bcount+i].first = ecount + i*total_body_edge_count;
+            bedgeinfo[bcount+i].last_outer = bedgeinfo[bcount+i].first + b.edges.size();
+            bedgeinfo[bcount+i].last       = bedgeinfo[bcount+i].first + total_body_edge_count;
 
-            for(index v=0 ; v<bvertcount[bcount+i] ; ++v)
-                bvert[bcount+i][v] = vcount + i*b.vertices.size() + v;
-            for(index e=0 ; e<b.edges.size() ; ++e)
-                bedge[bcount+i][e] =   e_occluded_start + i*b.edges.size() + e;
-            for(index e=0 ; e<b.occluded_edges.size() ; ++e)
-                bedge[bcount+i][b.edges.size()+e] = new_occluded_start + (ecount-e_occluded_start) + i*b.occluded_edges.size() + e;
-        }
-        for(index i=0 ; i<cnt ; ++i) {
             bcenter[bcount+i] = computeCenterOfMass(bcount+i);
             for(index v=0 ; v<b.vertices.size() ; ++v) {
                 vpos    [vcount + i*b.vertices.size() + v] -= bcenter[bcount+i];
@@ -287,10 +275,8 @@ struct VerletPhysicsSystem {
 
         bcount += cnt;
         vcount += cnt*b.vertices.size();
-        ecount += cnt*(b.edges.size()+b.occluded_edges.size());
-        e_occluded_start = new_occluded_start;
+        ecount += cnt*(b.edges.size()+b.inner_edges.size());
     }
-
 
     void integrateNewPositions() {
         const RT sq_timestep = timestep*timestep;
@@ -302,7 +288,6 @@ struct VerletPhysicsSystem {
             vprevpos[i] = tmp;
         }
     }
-#define clamp(x,l,h) (std::min(h,std::max(l,x)))
     void keepVerticesInsideScreen() {
         for(index i=0 ; i<vcount ; ++i) {
             vpos[i].x = clamp(vpos[i].x, T(0), screen_size.x);
@@ -310,7 +295,6 @@ struct VerletPhysicsSystem {
         }
     }
     void edgeCorrectionStep() {
-
         for(index i=0 ; i<ecount ; ++i) {
             vec2<T> &v1pos = vpos[evert[i].v1];
             vec2<T> &v2pos = vpos[evert[i].v2];
@@ -327,11 +311,11 @@ struct VerletPhysicsSystem {
         T miny(std::numeric_limits<T>::max());
         T maxx(std::numeric_limits<T>::min());
         T maxy(std::numeric_limits<T>::min());
-        for(index v=0 ; v<bvertcount[i] ; ++v) {
-            minx = std::min(minx, vpos[bvert[i][v]].x);
-            miny = std::min(miny, vpos[bvert[i][v]].y);
-            maxx = std::max(maxx, vpos[bvert[i][v]].x);
-            maxy = std::max(maxy, vpos[bvert[i][v]].y);
+        for(index v=bvertinfo[i].first ; v<bvertinfo[i].last ; ++v) {
+            minx = std::min(minx, vpos[v].x);
+            miny = std::min(miny, vpos[v].y);
+            maxx = std::max(maxx, vpos[v].x);
+            maxy = std::max(maxy, vpos[v].y);
         }
         vec2<T> halfSize(abs(maxx-minx)/T(2), abs(maxy-miny)/T(2));
         vec2<T> center(minx+halfSize.x, miny+halfSize.y);
@@ -340,9 +324,9 @@ struct VerletPhysicsSystem {
 
     vec2<T> computeCenterOfMass(index i) const {
         vec2<T> center(0,0);
-        for(index v=0 ; v<bvertcount[i] ; ++v)
-            center += vpos[bvert[i][v]];
-        return center / bvertcount[i];
+        for(index v=bvertinfo[i].first ; v<bvertinfo[i].last ; ++v)
+            center += vpos[v];
+        return center / (bvertinfo[i].last - bvertinfo[i].first);
     }
 
     typedef struct {
@@ -356,39 +340,53 @@ struct VerletPhysicsSystem {
     }
 
     bool bodyHasEdge(index b, index e) { 
-        for(index i=0 ; i<bedgecount[b] ; ++i)
-            if(bedge[b][i] == e)
+        for(index i=bedgeinfo[b].first ; i<bedgeinfo[b].last ; ++i)
+            if(i == e)
                 return true;
         return false; 
     }
     vec2<T> projectBodyToAxis(index b, vec2<T> axis) {
-        T dotp(dot(axis, vpos[bvert[b][0]]));
+        T dotp(dot(axis, vpos[bvertinfo[b].first]));
         vec2<T> proj(dotp, dotp);
-        for(index i=0 ; i<bvertcount[b] ; ++i) {
-            dotp = dot(axis, vpos[bvert[b][i]]);
+        for(index v=bvertinfo[b].first ; v<bvertinfo[b].last ; ++v) {
+            dotp = dot(axis, vpos[v]);
             proj = vec2<T>(std::min(dotp, proj.x), std::max(dotp, proj.y));
         }
         return proj;
     }
 
     bool detectCollision(collision_info &ci, index b1, index b2) {
+
+        // The point of the below loop is to perform
+        // the Separating Axis Test to see if both bodies collide.
+        // It's about projecting both bodies onto axes and see
+        // if their projections intersect (interval_distance()).
+        // An infinity of axes should be tested, but it turns out
+        // we can restrict ourselves to the few that are perpendicular to
+        // the edges.
+
+        // In practice, it's insane and unlikely to even have 100 vertices per body.
+        // If one body even had 1024 vertices, SDL2's renderer wouldn't keep up.
+        // I agree that this limitation should be documented if this code was to be used
+        // in an actual program.
+        // Basically we just copy all edge vertices into l_evert.
+        index b1_outer_ecount = bedgeinfo[b1].last_outer - bedgeinfo[b1].first;
+        index b2_outer_ecount = bedgeinfo[b2].last_outer - bedgeinfo[b2].first;
+        index l_edge_count = b1_outer_ecount + b2_outer_ecount;
+        index l_eindex[2048];
+        assert(l_edge_count <= 2048);
+
+        for(index i=0 ; i<b1_outer_ecount ; ++i)
+            l_eindex[i] = bedgeinfo[b1].first + i;
+        for(index i=0 ; i<b2_outer_ecount ; ++i)
+            l_eindex[i+b1_outer_ecount] = bedgeinfo[b2].first + i;
+
         ci.depth = std::numeric_limits<T>::max();
-        //ci.depth = T(10000);
-        // Iterate through edges of both bodies.
-        index currentbody = b1;
-        for(index eindex=0 ;  ; ++eindex) 
-        {
-            if(currentbody==b1 && eindex >= bedgecount[b1])
-                currentbody = b2;
-            if(currentbody==b2 && eindex >= bedgecount[b2])
-                break;
-            index e = bedge[currentbody][eindex];
-            /// XXX Optimization is pointless o_o
-            if(e >= e_occluded_start)
-                continue;
-            index v1 = evert[e].v1, v2 = evert[e].v2;
+        for(index i=0 ; i<l_edge_count ; ++i) {
+            index ev1 = evert[l_eindex[i]].v1;
+            index ev2 = evert[l_eindex[i]].v2;
             // axis = normalize(perpendicular to edge).
-            vec2<T> axis = normalize(vec2<T>(vpos[v1].y - vpos[v2].y, vpos[v2].x - vpos[v1].x));
+            vec2<T> axis = normalize(vec2<T>(vpos[ev1].y - vpos[ev2].y, vpos[ev2].x - vpos[ev1].x));
             vec2<T> b1proj = projectBodyToAxis(b1, axis);
             vec2<T> b2proj = projectBodyToAxis(b2, axis);
             T distance = interval_distance(b1proj, b2proj);
@@ -399,30 +397,37 @@ struct VerletPhysicsSystem {
                 continue;
             ci.depth  = distance;
             ci.normal = axis;
-            ci.edge   = e;
+            ci.edge   = l_eindex[i];
         }
+
         if(!bodyHasEdge(b2, ci.edge))
              std::swap(b1, b2); // so b1 contains the vertex.
+
         if(dot(ci.normal, bcenter[b1] - bcenter[b2]) < T(0))
              ci.normal = -ci.normal; // so normal points to b1.
+
         // find ci.vert
         T smallest_distance(std::numeric_limits<T>::max());
-        for(index v=0 ; v<bvertcount[b1] ; ++v) {
-            T distance = dot(ci.normal, vpos[bvert[b1][v]] - bcenter[b1]);
+        for(index v=bvertinfo[b1].first ; v<bvertinfo[b1].last ; ++v) {
+            T distance = dot(ci.normal, vpos[v] - bcenter[b1]);
             if(distance >= smallest_distance)
                 continue;
             smallest_distance = distance;
-            ci.vert = bvert[b1][v];
+            ci.vert = v;
         }
         return true;
     }
 
-    void processCollision(const collision_info &ci, index b1, index b2) {
+    void processCollision(const collision_info &ci) {
         vec2<T> collision_vector = ci.normal*ci.depth;
         T t;
         index v  = ci.vert;
         index v1 = evert[ci.edge].v1;
         index v2 = evert[ci.edge].v2;
+
+        // Here goes the math magic, I'm ashamed to have no idea what's going on
+        // with that lambda thing.
+
         if(abs(vpos[v1].x - vpos[v2].x ) > abs(vpos[v1].y - vpos[v2].y))
 		    t = (vpos[v].x - collision_vector.x - vpos[v1].x) / (vpos[v2].x - vpos[v1].x);
 	    else
@@ -434,13 +439,19 @@ struct VerletPhysicsSystem {
 
         if(!enable_experimental_friction)
             return;
+        // Giving friction a shot.
+        // My idea is basically to make the colliding vertex a bit
+        // closer to its previous position, along the edge it collides
+        // with.
+
         vec2<T> mv = vpos[v] - vprevpos[v];
         vec2<T> v1v2 = vpos[v1] - vpos[v2];
         T dotp = dot(normalize(mv), normalize(v1v2));
-        if(abs(dotp) > T(.9))
-            vpos[v] -= mv*friction_coefficient;
+        if(abs(dotp) > T(.9)) // Are the two vectors similar enough ?
+            vpos[v] -= mv*friction_coefficient; // Apply friction.
     }
 
+    // O(n^2) complexity, woohoo !
     void processBodyCollisions() {
         for(index b1=0 ; b1<bcount ; ++b1) 
             for(index b2=0 ; b2<bcount ; ++b2) {
@@ -450,7 +461,7 @@ struct VerletPhysicsSystem {
                     continue;
                 collision_info ci({});
                 if(detectCollision(ci, b1, b2))
-                    processCollision(ci, b1, b2);
+                    processCollision(ci);
             }
     }
     void iterateCollisions() {
@@ -489,8 +500,7 @@ struct VerletPhysicsSystem {
     }
 
     void renderSDL2(SDL_Renderer *rdr, RT interp=1) const {
-        SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
-
+        SDL_SetRenderDrawColor(rdr, 255, 0, 255, 255);
         //Render each edge...
         for(index i=0 ; i<ecount ; ++i) {
             index v1 = evert[i].v1, v2 = evert[i].v2;
@@ -501,24 +511,18 @@ struct VerletPhysicsSystem {
             b.y = RT(vprevpos[v2].y) + interp*RT(vpos[v2].y - vprevpos[v2].y);
             SDL_RenderDrawLine(rdr, a.x, a.y, b.x, b.y);
         }
-        SDL_SetRenderDrawColor(rdr,   0, 255, 0, 255);
-        // Ugly way of rendering vertices.
         for(index i=0 ; i<vcount ; ++i) {
-            SDL_SetRenderDrawColor(rdr, vcolor[i].r, vcolor[i].g, vcolor[i].b,
-                                        vcolor[i].a);
-            for(int y=-1 ; y<=1 ; ++y) {
-                for(int x=-1 ; x<=1 ; ++x) {
-                    vec2<int> ipos;
-                    ipos.x = RT(vprevpos[i].x) + interp*RT(vpos[i].x - vprevpos[i].x);
-                    ipos.y = RT(vprevpos[i].y) + interp*RT(vpos[i].y - vprevpos[i].y);
-                    SDL_RenderDrawPoint(rdr, ipos.x+x, ipos.y+y);
-                }
-            }
+            vec2<int> ipos;
+            ipos.x = RT(vprevpos[i].x) + interp*RT(vpos[i].x - vprevpos[i].x);
+            ipos.y = RT(vprevpos[i].y) + interp*RT(vpos[i].y - vprevpos[i].y);
+            SDL_Rect rect = {ipos.x-1, ipos.y-1, 3, 3};
+            SDL_SetRenderDrawColor(rdr, vcolor[i].r, vcolor[i].g, vcolor[i].b, vcolor[i].a);
+            SDL_RenderFillRect(rdr, &rect);
         }
     }
     void renderSDL2WithAabbs(SDL_Renderer *rdr, RT interp=1) const {
         renderSDL2(rdr, interp);
-        SDL_SetRenderDrawColor(rdr, 0, 255, 0, 255);
+        SDL_SetRenderDrawColor(rdr, 0, 255, 255, 255);
         //Render each AABB... No pretty interpolaton here, we don't care that much.
         for(index i=0 ; i<bcount ; ++i)
             baabb[i].renderSDL2Wireframe(rdr);

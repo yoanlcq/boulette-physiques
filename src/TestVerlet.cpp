@@ -215,13 +215,16 @@ void TestVerlet::updateFixedStepSimulation() {
         is_grabbing_a_vertex = !is_grabbing_a_vertex;
     }
 
+
     verletSys.update();
 
+
     if(is_grabbing_a_vertex) {
-        if(grabbed_vertex_index >= verletSys.vcount)
+        if(grabbed_vertex_index >= verletSys.vcount) {
             is_grabbing_a_vertex = false;
-        else
+        } else {
             verletSys.vpos[grabbed_vertex_index] = mouseworldpos;
+        }
     }
 
 
@@ -234,32 +237,30 @@ void TestVerlet::updateFixedStepSimulation() {
         << "Mouse : " << input.mousepos
         << " | Timestep : " << verletSys.timestep
         << " | Gravity : "  << verletSys.gravity
+        << " | Tick : " << tick
         << endl
-        << "Experimental friction : " 
+        << "Experimental friction (not on screen borders) : " 
         << (verletSys.enable_experimental_friction ? "on" : "off")
         << " (coeff: " << verletSys.friction_coefficient <<  ")"
         << endl
         << verletSys.bcount << " bodies"
         << " | " << verletSys.vcount << " vertices"
-        << " | " << verletSys.ecount << " edges"
-        << " ("  << (verletSys.ecount-verletSys.e_occluded_start)
-        << " ("  << (uint32_t)(100.f*(verletSys.ecount-verletSys.e_occluded_start)/(float)verletSys.ecount) << "%)"
-        << " occluded)" << endl
+        << " | " << verletSys.ecount << " edges" << endl
         << endl
         << "--- NEXT BODY INSTANCE'S SETTINGS ---" << endl
         << "Vertex count : " << creation_tool.vertex_count 
         << " | Radius : " << creation_tool.radius << endl
         << endl
         << "--- COMMANDS ---" << endl
-        << "Left click : drag/drop the closest vertex" << endl
+        << "Left click : drag/drop the closest vertex (see README about issues)" << endl
         << "Left and Right arrow keys : Change timestep" << endl
-        << "Up and Down arrow keys : Change new body instance's radius" << endl
-        << "+ and - keys : Change new body instance's vertex count" << endl
+        << "Up and Down arrow keys : Change next body instance's radius" << endl
+        << "+ and - keys : Change next body instance's vertex count" << endl
         << "N : Instanciate Necklace (pretty!)" << endl
         << "S : Instanciate Slimy Disk (funny!)" << endl
         << "D : Instanciate Rigid Disk (expensive!)" << endl
         << "F : Toggle experimental friction" << endl
-        << "A : Toggle AABB display" << endl
+        << "A : Toggle AABB display (no render-time interpolation)" << endl
         << "R : Remove all bodies mercilessly" << endl
     ;
     }
