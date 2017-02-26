@@ -13,7 +13,13 @@ static uint32_t timer_callback(uint32_t interval, void *param) {
     return interval;
 }
 
-int main(int argc, char *argv[]) {
+#ifdef _WIN32
+#include <windows.h>
+int CALLBACK WinMain(HINSTANCE h, HINSTANCE p, LPSTR cmdline, int show)
+#else
+int main(int argc, char *argv[]) 
+#endif
+{
 
     if(SDL_Init(SDL_INIT_EVERYTHING) < 0) {
         std::cerr << "SDL_Init(): " << SDL_GetError() << std::endl;
