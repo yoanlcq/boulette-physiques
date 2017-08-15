@@ -28,7 +28,7 @@ learned that what I was doing sucked pretty bad because of the accuracy loss
 over time (the example shown by the author is really convincing).  
 I then moved all my efforts into implementing a Verlet Integration-based physics system, 
 which is, right now, this project's main selling point.  
-It appears quite good for cloth simulation, and it was also used in "Hitman : Codename 47" for ragdolls and other stuff.  
+It (the algorithm) appears quite good for cloth simulation, and was also used in "Hitman : Codename 47" for ragdolls and other stuff.  
   
 The file is `include/boulette/verlet.hpp`. One can test it using various types, by changing
 the `unit` and `real` `typedefs` in `include/TestVerlet.hpp` (this is documented in that file).  
